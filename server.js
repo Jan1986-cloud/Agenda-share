@@ -202,7 +202,8 @@ app.get('/get-availability', async (req, res) => {
     if (linkResult.rows.length === 0) return res.status(404).send('Link niet gevonden.');
     
     const linkInfo = linkResult.rows[0];
-    const { user_id: userId, title, duration, buffer, availability, start_address: startAddress } = linkInfo;
+    const { user_id: userId, title, duration, buffer, start_address: startAddress } = linkInfo;
+    const availability = JSON.parse(linkInfo.availability);
 
     const userResult = await pool.query('SELECT tokens FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) return res.status(404).send('Gebruiker niet gevonden.');
@@ -346,22 +347,29 @@ app.post('/book-appointment', async (req, res) => {
 });
 
 const startServer = async () => {
-  await createTables();
-  const requiredVars = [
-    'GOOGLE_CLIENT_ID',
-    'GOOGLE_CLIENT_SECRET',
-    'GOOGLE_REDIRECT_URI',
-    'DATABASE_URL',
-    'GOOGLE_MAPS_API_KEY',
-  ];
-  for (const v of requiredVars) {
-    if (!process.env[v]) {
-      console.warn(`WARNING: Environment variable ${v} is not set.`);
+  try {
+    await createTables();
+    console.log('Database tables checked/created successfully.');
+    
+    const requiredVars = [
+      'GOOGLE_CLIENT_ID',
+      'GOOGLE_CLIENT_SECRET',
+      'GOOGLE_REDIRECT_URI',
+      'DATABASE_URL',
+      'GOOGLE_MAPS_API_KEY',
+    ];
+    for (const v of requiredVars) {
+      if (!process.env[v]) {
+        console.warn(`WARNING: Environment variable ${v} is not set.`);
+      }
     }
+    app.listen(port, () => {
+      console.log(`Server luistert op http://localhost:${port}`);
+    });
+  } catch (error) {
+    console.error('Failed to initialize database or start server:', error);
+    process.exit(1);
   }
-  app.listen(port, () => {
-    console.log(`Server luistert op http://localhost:${port}`);
-  });
 };
 
 startServer();

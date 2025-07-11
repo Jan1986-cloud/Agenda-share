@@ -274,8 +274,8 @@
         linkModal.addEventListener('shown.bs.modal', () => {
             const addressInput = document.getElementById('startAddress');
             // Check if the Autocomplete class is available and not already attached
-            if (Autocomplete && addressInput && !addressInput.dataset.autocompleteAttached) {
-                new Autocomplete(addressInput, {
+            if (window.google && window.google.maps && window.google.maps.places && addressInput && !addressInput.dataset.autocompleteAttached) {
+                autocomplete = new google.maps.places.Autocomplete(addressInput, {
                     types: ['address'],
                     componentRestrictions: { country: 'nl' },
                 });

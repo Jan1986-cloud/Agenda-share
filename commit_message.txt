@@ -1,1 +1,1 @@
-Fix: Autocomplete and add copy button
+Fix: Critical bugfixes for data, autocomplete and links
