@@ -187,6 +187,39 @@ app.delete('/api/links/:id', async (req, res) => {
     }
 });
 
+// --- API for Appointments ---
+
+// GET appointment statistics for the logged-in user
+app.get('/api/appointments/stats', async (req, res) => {
+    if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
+    try {
+        const { rows } = await pool.query('SELECT COUNT(*) FROM appointments WHERE user_id = $1', [req.session.userId]);
+        res.json({ count: parseInt(rows[0].count, 10) });
+    } catch (error) {
+        console.error('Error fetching appointment stats:', error);
+        res.status(500).send('Fout bij het ophalen van statistieken.');
+    }
+});
+
+// GET all appointments for the logged-in user
+app.get('/api/appointments', async (req, res) => {
+    if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
+    try {
+        const { rows } = await pool.query('SELECT * FROM appointments WHERE user_id = $1 ORDER BY appointment_time DESC', [req.session.userId]);
+        res.json(rows);
+    } catch (error) {
+        console.error('Error fetching appointments:', error);
+        res.status(500).send('Fout bij het ophalen van afspraken.');
+    }
+});
+
+app.get('/appointments.html', (req, res) => {
+    if (!req.session.userId) {
+        return res.redirect('/');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'appointments.html'));
+});
+
 app.get('/schedule', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'schedule.html'));
 });
@@ -317,6 +350,12 @@ app.post('/book-appointment', async (req, res) => {
     if (linkResult.rows.length === 0) return res.status(404).send('Link niet gevonden.');
 
     const { user_id: userId, title, duration, start_address: startAddress, calendar_id: calendarId } = linkResult.rows[0];
+
+    // Log the appointment
+    await pool.query(
+        'INSERT INTO appointments (link_id, user_id, name, email, phone, appointment_time, destination_address) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [linkId, userId, name, email, phone, startTime, destinationAddress]
+    );
 
     const userResult = await pool.query('SELECT tokens FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) return res.status(404).send('Gebruiker niet gevonden.');

@@ -57,6 +57,20 @@ export const createTables = async () => {
         console.log('Migrated links table: added calendar_id column.');
     }
 
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS appointments (
+            id SERIAL PRIMARY KEY,
+            link_id VARCHAR(255) NOT NULL REFERENCES links(id) ON DELETE CASCADE,
+            user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NOT NULL,
+            phone VARCHAR(255) NOT NULL,
+            appointment_time TIMESTAMPTZ NOT NULL,
+            destination_address TEXT NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+    `);
+
     console.log('Tables created successfully or already exist.');
   } catch (err) {
     console.error('Error creating/migrating tables:', err);

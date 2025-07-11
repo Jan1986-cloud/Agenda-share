@@ -17,6 +17,22 @@
 </head>
 <body>
     <div class="container my-5">
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <h1 class="h2">Dashboard</h1>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <a href="/appointments.html" class="text-decoration-none text-dark">
+                        <div class="card-body">
+                            <h5 class="card-title">Totaal Afspraken</h5>
+                            <p class="card-text fs-2 fw-bold" id="stats-count">0</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
         <!-- Main Form for Creating/Editing Links -->
         <div class="card shadow-sm mb-5">
             <div class="card-body p-4 p-md-5">
@@ -98,6 +114,16 @@
             document.getElementById('linkId').value = '';
             document.getElementById('clear-form-btn').style.display = 'none';
             renderAvailabilitySchedule();
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/appointments/stats');
+                const data = await response.json();
+                document.getElementById('stats-count').textContent = data.count;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
         }
 
         async function loadCalendars() {
@@ -289,6 +315,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadLinks();
             loadCalendars();
+            loadStats();
             loadGoogleMapsScript();
             renderAvailabilitySchedule();
         });

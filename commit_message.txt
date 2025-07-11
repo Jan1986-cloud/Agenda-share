@@ -1,1 +1,1 @@
-Feat: Add multi-calendar support
+Feat: Add statistics dashboard
