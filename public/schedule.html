@@ -18,10 +18,16 @@
       .card {
         border-radius: 0.75rem;
       }
-      .time-slot-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: 0.75rem;
+      .slot-picker {
+        height: 300px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+      }
+      .slot-picker .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
       }
     </style>
   </head>
@@ -72,10 +78,23 @@
           <div id="booking-view" style="display: none">
             <h2 id="appointment-title-booking" class="text-center mb-4"></h2>
             <p class="text-center text-muted mb-4">
-              Kies een beschikbaar tijdstip.
+              Kies een dag en een tijdstip.
             </p>
-            <div id="available-slots" class="time-slot-grid mb-4"></div>
-            <form id="booking-form" style="display: none">
+            <div class="row">
+              <div class="col-md-6">
+                <h3 class="fs-5 text-center mb-3">Kies een dag</h3>
+                <div id="day-picker" class="slot-picker">
+                  <!-- Day buttons will be injected here -->
+                </div>
+              </div>
+              <div class="col-md-6">
+                <h3 class="fs-5 text-center mb-3">Kies een tijd</h3>
+                <div id="time-picker" class="slot-picker">
+                  <!-- Time buttons will be injected here -->
+                </div>
+              </div>
+            </div>
+            <form id="booking-form" style="display: none" class="mt-4">
               <h3 class="fs-5 mb-3">Bevestig uw gegevens</h3>
               <div class="mb-3">
                 <label for="name" class="form-label">Uw naam</label>
@@ -118,7 +137,9 @@
     <script>
       const params = new URLSearchParams(window.location.search);
       const linkId = params.get('linkId');
-      let selectedSlot = null;
+      let selectedDate = null;
+      let selectedTime = null;
+      let finalSlotsByDay = new Map();
 
       function switchView(viewId) {
         ['address-view', 'loading-view', 'booking-view', 'confirmation-view', 'error-view'].forEach(id => {
@@ -129,6 +150,75 @@
       function showError(message) {
         document.getElementById('error-message').textContent = message;
         switchView('error-view');
+      }
+
+      function processSlots(rawSlots, durationMinutes) {
+          const slotsByDay = new Map();
+          rawSlots.forEach(slot => {
+              const startDate = new Date(slot.start);
+              const dayString = startDate.toISOString().split('T')[0];
+              if (!slotsByDay.has(dayString)) {
+                  slotsByDay.set(dayString, []);
+              }
+              slotsByDay.get(dayString).push({ start: startDate, end: new Date(slot.end) });
+          });
+
+          const processedSlots = new Map();
+          for (const [dayString, daySlots] of slotsByDay.entries()) {
+              const thirtyMinSlots = new Set();
+              const earliest = new Date(Math.min(...daySlots.map(s => s.start.getTime())));
+              const latest = new Date(Math.max(...daySlots.map(s => s.end.getTime())));
+
+              let currentTime = new Date(earliest);
+              currentTime.setSeconds(0, 0);
+              currentTime.setMinutes(Math.ceil(currentTime.getMinutes() / 30) * 30);
+
+              while (currentTime < latest) {
+                  const slotEndTime = new Date(currentTime.getTime() + durationMinutes * 60000);
+                  let isAvailable = false;
+                  for (const rawSlot of daySlots) {
+                      if (currentTime >= rawSlot.start && slotEndTime <= rawSlot.end) {
+                          isAvailable = true;
+                          break;
+                      }
+                  }
+                  if (isAvailable) {
+                      thirtyMinSlots.add(currentTime.toTimeString().substring(0, 5));
+                  }
+                  currentTime.setMinutes(currentTime.getMinutes() + 30);
+              }
+              if (thirtyMinSlots.size > 0) {
+                  processedSlots.set(dayString, Array.from(thirtyMinSlots).sort());
+              }
+          }
+          return processedSlots;
+      }
+
+      function displayTimes(dayKey) {
+          const timePicker = document.getElementById('time-picker');
+          timePicker.innerHTML = '';
+          const times = finalSlotsByDay.get(dayKey);
+          
+          document.querySelectorAll('#day-picker .btn').forEach(b => b.classList.remove('btn-primary', 'active'));
+          document.querySelector(`#day-picker .btn[data-day-key="${dayKey}"]`).classList.add('btn-primary', 'active');
+
+          if (times && times.length > 0) {
+              times.forEach(time => {
+                  const btn = document.createElement('button');
+                  btn.className = 'btn btn-outline-primary';
+                  btn.textContent = time;
+                  btn.onclick = () => {
+                      selectedDate = new Date(dayKey + 'T' + time);
+                      selectedTime = time;
+                      document.querySelectorAll('#time-picker .btn').forEach(b => b.classList.remove('btn-primary', 'active'));
+                      btn.classList.add('btn-primary', 'active');
+                      document.getElementById('booking-form').style.display = 'block';
+                  };
+                  timePicker.appendChild(btn);
+              });
+          } else {
+              timePicker.innerHTML = '<p class="text-center text-muted">Geen tijden beschikbaar op deze dag.</p>';
+          }
       }
 
       document.getElementById('check-availability-btn').addEventListener('click', async () => {
@@ -146,27 +236,29 @@
           document.getElementById('appointment-title-main').textContent = data.title;
           document.getElementById('appointment-title-booking').textContent = data.title;
           
-          const slotsContainer = document.getElementById('available-slots');
-          slotsContainer.innerHTML = '';
-          if (data.slots.length === 0) {
-            slotsContainer.innerHTML = '<p class="text-center">Geen beschikbare tijden gevonden in de komende 7 dagen.</p>';
-          } else {
-            data.slots.forEach(slot => {
+          finalSlotsByDay = processSlots(data.slots, data.duration);
+          const dayPicker = document.getElementById('day-picker');
+          dayPicker.innerHTML = '';
+
+          if (finalSlotsByDay.size === 0) {
+              showError('Geen beschikbare dagen gevonden in de komende periode.');
+              return;
+          }
+
+          Array.from(finalSlotsByDay.keys()).sort().forEach(dayKey => {
               const btn = document.createElement('button');
               btn.className = 'btn btn-outline-primary';
-              const startTime = new Date(slot.start);
-              btn.textContent = `${startTime.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })} ${startTime.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`;
-              btn.onclick = () => {
-                selectedSlot = slot.start;
-                document.querySelectorAll('#available-slots .btn').forEach(b => b.classList.remove('btn-primary'));
-                btn.classList.add('btn-primary');
-                btn.classList.remove('btn-outline-primary');
-                document.getElementById('booking-form').style.display = 'block';
-              };
-              slotsContainer.appendChild(btn);
-            });
-          }
+              const date = new Date(dayKey);
+              btn.textContent = date.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+              btn.dataset.dayKey = dayKey;
+              btn.onclick = () => displayTimes(dayKey);
+              dayPicker.appendChild(btn);
+          });
+
           switchView('booking-view');
+          // Automatically display times for the first available day
+          displayTimes(Array.from(finalSlotsByDay.keys()).sort()[0]);
+
         } catch (error) {
           showError(error.message);
         }
@@ -182,7 +274,7 @@
           const response = await fetch('/book-appointment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ linkId, startTime: selectedSlot, name, email, destinationAddress }),
+            body: JSON.stringify({ linkId, startTime: selectedDate.toISOString(), name, email, destinationAddress }),
           });
           if (!response.ok) throw new Error('Kon de afspraak niet boeken.');
           switchView('confirmation-view');

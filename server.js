@@ -350,7 +350,7 @@ app.get('/get-availability', async (req, res) => {
       `5. Calculation finished. Found ${availableSlots.length} total available slots.`
     );
     console.log('--- Finished /get-availability ---');
-    res.json({ title, slots: availableSlots });
+    res.json({ title, duration, slots: availableSlots });
   } catch (error) {
     console.error('--- FATAL ERROR in /get-availability ---');
     console.error('Full error object:', error);

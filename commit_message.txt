@@ -1,1 +1,1 @@
-Fix: Apply Maps API fix to schedule page
+Feat: Redesign schedule page with two-column picker
