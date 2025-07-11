@@ -257,6 +257,7 @@ app.get('/get-availability', async (req, res) => {
     
     const linkInfo = linkResult.rows[0];
     const { user_id: userId, title, duration, buffer, start_address: startAddress, calendar_id: calendarId } = linkInfo;
+    const availability = typeof linkInfo.availability === 'string' ? JSON.parse(linkInfo.availability) : linkInfo.availability;
     // Safely parse availability, which might be a string or already an object
     const availability = typeof linkInfo.availability === 'string' ? JSON.parse(linkInfo.availability) : linkInfo.availability;
 

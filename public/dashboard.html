@@ -278,13 +278,23 @@
 
         document.getElementById('clear-form-btn').addEventListener('click', resetForm);
 
+        let googleApiLoaded = false;
+        window.initMap = function() {
+            googleApiLoaded = true;
+            const linkModal = document.getElementById('link-modal');
+            if (linkModal.classList.contains('show')) {
+                initAutocomplete();
+            }
+        };
+
         function initAutocomplete() {
             const addressInput = document.getElementById('startAddress');
-            if (addressInput) {
+            if (googleApiLoaded && addressInput && !addressInput.dataset.autocompleteAttached) {
                 autocomplete = new google.maps.places.Autocomplete(addressInput, {
                     types: ['address'],
                     componentRestrictions: { country: 'nl' },
                 });
+                addressInput.dataset.autocompleteAttached = 'true';
             }
         }
 
@@ -300,8 +310,6 @@
                     console.error('Google Maps API Key is missing.');
                     return;
                 }
-                window.initMap = initAutocomplete;
-                
                 const script = document.createElement('script');
                 script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&libraries=places&callback=initMap&loading=async`;
                 script.async = true;
@@ -318,6 +326,17 @@
             loadStats();
             loadGoogleMapsScript();
             renderAvailabilitySchedule();
+        });
+
+        const linkModal = document.getElementById('link-modal');
+        linkModal.addEventListener('shown.bs.modal', initAutocomplete);
+        linkModal.addEventListener('hidden.bs.modal', () => {
+            const addressInput = document.getElementById('startAddress');
+            if (addressInput) {
+                addressInput.dataset.autocompleteAttached = '';
+                const pacContainers = document.querySelectorAll('.pac-container');
+                pacContainers.forEach(elem => elem.remove());
+            }
         });
     </script>
 </body>
