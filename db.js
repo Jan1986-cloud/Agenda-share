@@ -1,13 +1,14 @@
-const { Pool } = require('pg');
+import pg from 'pg';
+const { Pool } = pg;
 
-const pool = new Pool({
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false,
   },
 });
 
-const createTables = async () => {
+export const createTables = async () => {
   const client = await pool.connect();
   try {
     await client.query(`
@@ -49,9 +50,4 @@ const createTables = async () => {
   } finally {
     client.release();
   }
-};
-
-module.exports = {
-  pool,
-  createTables,
 };

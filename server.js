@@ -1,13 +1,17 @@
-require('dotenv').config();
-const express = require('express');
-const { google } = require('googleapis');
-const bodyParser = require('body-parser');
-const { v4: uuidv4 } = require('uuid');
-const path = require('path');
-const session = require('express-session');
-const cookieParser = require('cookie-parser');
-const { pool, createTables } = require('./db');
-const fetch = require('node-fetch');
+import 'dotenv/config';
+import express from 'express';
+import { google } from 'googleapis';
+import bodyParser from 'body-parser';
+import { v4 as uuidv4 } from 'uuid';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import session from 'express-session';
+import cookieParser from 'cookie-parser';
+import { pool, createTables } from './db.js';
+import fetch from 'node-fetch';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 3000;
