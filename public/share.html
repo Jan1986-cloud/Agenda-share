@@ -125,29 +125,150 @@
     </div>
 
     <script>
-      // --- Form Logic ---
+      // --- Availability Schedule ---
+      function renderAvailabilitySchedule() {
+        const container = document.getElementById('availability-schedule');
+        const days = [
+          'Zondag',
+          'Maandag',
+          'Dinsdag',
+          'Woensdag',
+          'Donderdag',
+          'Vrijdag',
+          'Zaterdag',
+        ];
+        let html = '<div class="availability-grid">';
+
+        days.forEach((day, index) => {
+          html += `
+            <label>${day}</label>
+            <input type="time" class="form-control" id="start-time-${index}" />
+            <input type="time" class="form-control" id="end-time-${index}" />
+          `;
+        });
+
+        html += '</div>';
+        container.innerHTML = html;
+      }
+
+      // --- Form Submission ---
       document
         .getElementById('share-form')
         .addEventListener('submit', async (e) => {
           e.preventDefault();
-          // ... (rest of the form submission logic remains the same)
+          const generateBtn = document.getElementById('generate-btn');
+          generateBtn.disabled = true;
+          generateBtn.textContent = 'Moment...';
+
+          const availability = [];
+          for (let i = 0; i < 7; i++) {
+            const startTime = document.getElementById(`start-time-${i}`).value;
+            const endTime = document.getElementById(`end-time-${i}`).value;
+            if (startTime && endTime) {
+              availability.push({
+                dayOfWeek: i,
+                startTime,
+                endTime,
+              });
+            }
+          }
+
+          const data = {
+            title: document.getElementById('title').value,
+            duration: document.getElementById('duration').value,
+            buffer: document.getElementById('buffer').value,
+            startAddress: document.getElementById('startAddress').value,
+            availability,
+          };
+
+          try {
+            const response = await fetch('/generate-link', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(data),
+            });
+
+            if (!response.ok) {
+              throw new Error(
+                'Er is een fout opgetreden bij het genereren van de link.'
+              );
+            }
+
+            const result = await response.json();
+            const link = `${window.location.origin}/schedule.html?linkId=${result.linkId}`;
+            document.getElementById('generated-link').value = link;
+            document.getElementById('form-view').style.display = 'none';
+            document.getElementById('share-link-result').style.display =
+              'block';
+            copyLink();
+          } catch (error) {
+            console.error(error);
+            alert(error.message);
+            generateBtn.disabled = false;
+            generateBtn.textContent = 'Genereer Deelbare Link';
+          }
         });
-      // ... (rest of the script remains the same)
-    </script>
-    <script
-      async
-      defer
-      src="https://maps.googleapis.com/maps/api/js?key=<%= process.env.GOOGLE_MAPS_API_KEY %>&libraries=places&callback=initAutocomplete"
-    ></script>
-    <script>
+
+      function copyLink() {
+        const linkInput = document.getElementById('generated-link');
+        linkInput.select();
+        document.execCommand('copy');
+        const feedback = document.getElementById('copy-feedback');
+        feedback.style.display = 'block';
+        setTimeout(() => {
+          feedback.style.display = 'none';
+        }, 2000);
+      }
+
+      // --- Google Maps Autocomplete ---
       let autocomplete;
-      function initAutocomplete() {
+
+      async function initMap() {
+        renderAvailabilitySchedule(); // Render the schedule as soon as the script is ready
+
+        const { Autocomplete } = await google.maps.importLibrary('places');
+
         const input = document.getElementById('startAddress');
-        autocomplete = new google.maps.places.Autocomplete(input, {
+        autocomplete = new Autocomplete(input, {
           types: ['address'],
-          componentRestrictions: { country: 'nl' }, // Restrict to Netherlands
+          componentRestrictions: { country: 'nl' },
         });
       }
+
+      // --- Dynamic Script Loading ---
+      async function loadGoogleMapsScript() {
+        try {
+          const response = await fetch('/api/config');
+          if (!response.ok) {
+            throw new Error('Could not fetch API key.');
+          }
+          const config = await response.json();
+          const apiKey = config.mapsApiKey;
+
+          if (!apiKey) {
+            console.error('Google Maps API Key is missing.');
+            // Render schedule even if maps fails
+            renderAvailabilitySchedule();
+            return;
+          }
+
+          const script = document.createElement('script');
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap&loading=async`;
+          script.async = true;
+          script.defer = true;
+          document.head.appendChild(script);
+        } catch (error) {
+          console.error('Error loading Google Maps:', error);
+          // Render schedule even if maps fails
+          renderAvailabilitySchedule();
+        }
+      }
+
+      // --- Initialization ---
+      // Redefine initMap in the global scope so the callback can find it
+      window.initMap = initMap;
+      // Load everything on DOM content loaded
+      document.addEventListener('DOMContentLoaded', loadGoogleMapsScript);
     </script>
   </body>
 </html>

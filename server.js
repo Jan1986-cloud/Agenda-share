@@ -43,6 +43,11 @@ const scopes = [
   'https://www.googleapis.com/auth/calendar.events',
 ];
 
+// API endpoint to provide the Google Maps API key to the frontend
+app.get('/api/config', (req, res) => {
+  res.json({ mapsApiKey: process.env.GOOGLE_MAPS_API_KEY });
+});
+
 // Homepage
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

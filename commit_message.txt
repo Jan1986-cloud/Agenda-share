@@ -1,1 +1,1 @@
-Fix: Convert to ES Modules to fix runtime error
+Fix: Update Google Maps API implementation
