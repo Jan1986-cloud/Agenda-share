@@ -7,7 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
-import { pool, createTables } from './db.js';
+import { pool, createTables, testConnection } from './db.js';
 import fetch from 'node-fetch';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -409,6 +409,7 @@ app.post('/book-appointment', async (req, res) => {
 
 const startServer = async () => {
   try {
+    await testConnection();
     await createTables();
     console.log('Database tables checked/created successfully.');
     

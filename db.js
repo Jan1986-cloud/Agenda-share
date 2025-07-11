@@ -8,6 +8,19 @@ export const pool = new Pool({
   },
 });
 
+export const testConnection = async () => {
+    let client;
+    try {
+        client = await pool.connect();
+        console.log('Database connection test successful.');
+    } catch (err) {
+        console.error('Database connection test failed:', err);
+        throw err; // Re-throw the error to stop the server startup
+    } finally {
+        if (client) client.release();
+    }
+};
+
 export const createTables = async () => {
   const client = await pool.connect();
   try {
@@ -78,3 +91,4 @@ export const createTables = async () => {
     client.release();
   }
 };
+
