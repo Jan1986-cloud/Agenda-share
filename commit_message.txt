@@ -1,1 +1,1 @@
-Feat: Add statistics dashboard
+Fix: Final critical fixes for data persistence and availability logic
