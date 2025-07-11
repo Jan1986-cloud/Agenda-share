@@ -18,6 +18,11 @@
       .card {
         border-radius: 0.75rem;
       }
+      .time-slot-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 0.75rem;
+      }
     </style>
   </head>
   <body>
@@ -54,21 +59,56 @@
               </button>
             </div>
           </div>
-          <!-- Other views remain the same -->
+
+          <!-- View 2: Loading -->
           <div id="loading-view" style="display: none" class="text-center">
             <div class="spinner-border" role="status">
               <span class="visually-hidden">Laden...</span>
             </div>
             <p class="mt-3">Beschikbaarheid wordt berekend...</p>
           </div>
+
+          <!-- View 3: Booking -->
           <div id="booking-view" style="display: none">
-            <!-- ... -->
+            <h2 id="appointment-title-booking" class="text-center mb-4"></h2>
+            <p class="text-center text-muted mb-4">
+              Kies een beschikbaar tijdstip.
+            </p>
+            <div id="available-slots" class="time-slot-grid mb-4"></div>
+            <form id="booking-form" style="display: none">
+              <h3 class="fs-5 mb-3">Bevestig uw gegevens</h3>
+              <div class="mb-3">
+                <label for="name" class="form-label">Uw naam</label>
+                <input type="text" id="name" class="form-control" required />
+              </div>
+              <div class="mb-3">
+                <label for="email" class="form-label">Uw e-mailadres</label>
+                <input type="email" id="email" class="form-control" required />
+              </div>
+              <div class="d-grid">
+                <button type="submit" class="btn btn-success btn-lg">
+                  Afspraak bevestigen
+                </button>
+              </div>
+            </form>
           </div>
+
+          <!-- View 4: Confirmation -->
           <div id="confirmation-view" style="display: none" class="text-center">
-            <!-- ... -->
+            <h2 class="text-success mb-3">Afspraak bevestigd!</h2>
+            <p>
+              U ontvangt een bevestiging per e-mail met de details van uw
+              afspraak.
+            </p>
           </div>
+
+          <!-- View 5: Error -->
           <div id="error-view" style="display: none" class="text-center">
-            <!-- ... -->
+            <h2 class="text-danger mb-3">Er is iets misgegaan</h2>
+            <p id="error-message"></p>
+            <button class="btn btn-primary" onclick="location.reload()">
+              Probeer opnieuw
+            </button>
           </div>
         </div>
       </div>
@@ -76,22 +116,122 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-      // --- All the previous JavaScript logic remains here ---
-    </script>
-    <script
-      async
-      defer
-      src="https://maps.googleapis.com/maps/api/js?key=<%= process.env.GOOGLE_MAPS_API_KEY %>&libraries=places&callback=initAutocomplete"
-    ></script>
-    <script>
-      let autocomplete;
-      function initAutocomplete() {
-        const input = document.getElementById('destinationAddress');
-        autocomplete = new google.maps.places.Autocomplete(input, {
-          types: ['address'],
-          componentRestrictions: { country: 'nl' }, // Restrict to Netherlands
+      const params = new URLSearchParams(window.location.search);
+      const linkId = params.get('linkId');
+      let selectedSlot = null;
+
+      function switchView(viewId) {
+        ['address-view', 'loading-view', 'booking-view', 'confirmation-view', 'error-view'].forEach(id => {
+          document.getElementById(id).style.display = id === viewId ? 'block' : 'none';
         });
       }
+
+      function showError(message) {
+        document.getElementById('error-message').textContent = message;
+        switchView('error-view');
+      }
+
+      document.getElementById('check-availability-btn').addEventListener('click', async () => {
+        const destinationAddress = document.getElementById('destinationAddress').value;
+        if (!destinationAddress) {
+          alert('Voer een adres in.');
+          return;
+        }
+        switchView('loading-view');
+        try {
+          const response = await fetch(`/get-availability?linkId=${linkId}&destinationAddress=${encodeURIComponent(destinationAddress)}`);
+          if (!response.ok) throw new Error('Kon beschikbaarheid niet ophalen.');
+          
+          const data = await response.json();
+          document.getElementById('appointment-title-main').textContent = data.title;
+          document.getElementById('appointment-title-booking').textContent = data.title;
+          
+          const slotsContainer = document.getElementById('available-slots');
+          slotsContainer.innerHTML = '';
+          if (data.slots.length === 0) {
+            slotsContainer.innerHTML = '<p class="text-center">Geen beschikbare tijden gevonden in de komende 7 dagen.</p>';
+          } else {
+            data.slots.forEach(slot => {
+              const btn = document.createElement('button');
+              btn.className = 'btn btn-outline-primary';
+              const startTime = new Date(slot.start);
+              btn.textContent = `${startTime.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })} ${startTime.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`;
+              btn.onclick = () => {
+                selectedSlot = slot.start;
+                document.querySelectorAll('#available-slots .btn').forEach(b => b.classList.remove('btn-primary'));
+                btn.classList.add('btn-primary');
+                btn.classList.remove('btn-outline-primary');
+                document.getElementById('booking-form').style.display = 'block';
+              };
+              slotsContainer.appendChild(btn);
+            });
+          }
+          switchView('booking-view');
+        } catch (error) {
+          showError(error.message);
+        }
+      });
+
+      document.getElementById('booking-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('email').value;
+        const destinationAddress = document.getElementById('destinationAddress').value;
+
+        try {
+          const response = await fetch('/book-appointment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ linkId, startTime: selectedSlot, name, email, destinationAddress }),
+          });
+          if (!response.ok) throw new Error('Kon de afspraak niet boeken.');
+          switchView('confirmation-view');
+        } catch (error) {
+          showError(error.message);
+        }
+      });
+
+      // --- Google Maps Autocomplete ---
+      let autocomplete;
+      async function initMap() {
+        const { Autocomplete } = await google.maps.importLibrary('places');
+        const input = document.getElementById('destinationAddress');
+        autocomplete = new Autocomplete(input, {
+          types: ['address'],
+          componentRestrictions: { country: 'nl' },
+        });
+      }
+
+      // --- Dynamic Script Loading ---
+      async function loadGoogleMapsScript() {
+        if (!linkId) {
+          showError('Ongeldige of ontbrekende link-ID.');
+          return;
+        }
+        try {
+          const response = await fetch('/api/config');
+          if (!response.ok) throw new Error('Kon configuratie niet laden.');
+          const config = await response.json();
+          const apiKey = config.mapsApiKey;
+
+          if (!apiKey) {
+            console.error('Google Maps API Key is missing.');
+            return;
+          }
+
+          const script = document.createElement('script');
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap&loading=async`;
+          script.async = true;
+          script.defer = true;
+          document.head.appendChild(script);
+        } catch (error) {
+          showError('Fout bij het laden van de kaartfunctionaliteit.');
+          console.error('Error loading Google Maps:', error);
+        }
+      }
+
+      window.initMap = initMap;
+      document.addEventListener('DOMContentLoaded', loadGoogleMapsScript);
     </script>
   </body>
 </html>

@@ -1,1 +1,1 @@
-Fix: Solve 403 error and pre-fill schedule
+Fix: Apply Maps API fix to schedule page
