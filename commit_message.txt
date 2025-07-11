@@ -1,1 +1,1 @@
-Fix: Final attempt to fix all outstanding bugs
+Fix: Remove duplicate variable declaration causing crash
