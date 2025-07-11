@@ -41,6 +41,10 @@
                             <input type="number" class="form-control" id="buffer" value="15" placeholder="Tijd tussen afspraken" />
                         </div>
                     </div>
+                    <div class="mb-3">
+                        <label for="calendarId" class="form-label">Agenda</label>
+                        <select id="calendarId" class="form-select"></select>
+                    </div>
                     <hr class="my-4" />
                     <h6 class="mb-3">Wekelijkse beschikbaarheid</h6>
                     <div id="availability-schedule"></div>
@@ -96,6 +100,28 @@
             renderAvailabilitySchedule();
         }
 
+        async function loadCalendars() {
+            const select = document.getElementById('calendarId');
+            try {
+                const response = await fetch('/api/calendars');
+                if (!response.ok) throw new Error('Kon agenda\'s niet laden.');
+                const calendars = await response.json();
+                select.innerHTML = '';
+                calendars.forEach(calendar => {
+                    const option = document.createElement('option');
+                    option.value = calendar.id;
+                    option.textContent = calendar.summary;
+                    if (calendar.primary) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error(error);
+                select.innerHTML = '<option value="">Kon agenda\'s niet laden</option>';
+            }
+        }
+
         async function loadLinks() {
             const list = document.getElementById('links-list');
             try {
@@ -148,6 +174,7 @@
                 buffer: document.getElementById('buffer').value,
                 startAddress: document.getElementById('startAddress').value,
                 availability,
+                calendarId: document.getElementById('calendarId').value,
             };
 
             const url = linkId ? `/api/links/${linkId}` : '/api/links';
@@ -202,6 +229,7 @@
                 document.getElementById('duration').value = link.duration;
                 document.getElementById('buffer').value = link.buffer;
                 document.getElementById('startAddress').value = link.start_address;
+                document.getElementById('calendarId').value = link.calendar_id || 'primary';
                 renderAvailabilitySchedule(link.availability);
                 
                 document.getElementById('clear-form-btn').style.display = 'inline-block';
@@ -260,6 +288,7 @@
         
         document.addEventListener('DOMContentLoaded', () => {
             loadLinks();
+            loadCalendars();
             loadGoogleMapsScript();
             renderAvailabilitySchedule();
         });

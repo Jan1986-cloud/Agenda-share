@@ -44,6 +44,19 @@ export const createTables = async () => {
       console.log('Migrated links table: added start_address column.');
     }
 
+    // Migration: Add calendar_id column if it doesn't exist
+    const calendarIdColumn = await client.query(`
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name='links' AND column_name='calendar_id'
+    `);
+    if (calendarIdColumn.rows.length === 0) {
+        await client.query(
+            `ALTER TABLE links ADD COLUMN calendar_id VARCHAR(255) NOT NULL DEFAULT 'primary'`
+        );
+        console.log('Migrated links table: added calendar_id column.');
+    }
+
     console.log('Tables created successfully or already exist.');
   } catch (err) {
     console.error('Error creating/migrating tables:', err);

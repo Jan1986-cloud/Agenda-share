@@ -107,18 +107,39 @@ app.get('/api/links', async (req, res) => {
   }
 });
 
+// GET all calendars for the logged-in user
+app.get('/api/calendars', async (req, res) => {
+    if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
+    try {
+        const userResult = await pool.query('SELECT tokens FROM users WHERE id = $1', [req.session.userId]);
+        if (userResult.rows.length === 0) return res.status(404).send('Gebruiker niet gevonden.');
+
+        const { tokens } = userResult.rows[0];
+        const auth = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, process.env.GOOGLE_REDIRECT_URI);
+        auth.setCredentials(tokens);
+
+        const calendar = google.calendar({ version: 'v3', auth });
+        const calendarList = await calendar.calendarList.list();
+        const writableCalendars = calendarList.data.items.filter(c => c.accessRole === 'owner' || c.accessRole === 'writer');
+        res.json(writableCalendars);
+    } catch (error) {
+        console.error('Error fetching calendars:', error);
+        res.status(500).send('Fout bij het ophalen van agenda\'s.');
+    }
+});
+
 // POST a new link
 app.post('/api/links', async (req, res) => {
   if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
-  const { title, duration, buffer, availability, startAddress } = req.body;
-  if (!title || !duration || !availability || !Array.isArray(availability) || !startAddress) {
+  const { title, duration, buffer, availability, startAddress, calendarId } = req.body;
+  if (!title || !duration || !availability || !Array.isArray(availability) || !startAddress || !calendarId) {
     return res.status(400).send('Ongeldige invoer.');
   }
   try {
     const linkId = uuidv4();
     await pool.query(
-      'INSERT INTO links (id, user_id, title, duration, buffer, availability, start_address) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-      [linkId, req.session.userId, title, parseInt(duration, 10), parseInt(buffer, 10) || 0, JSON.stringify(availability), startAddress]
+      'INSERT INTO links (id, user_id, title, duration, buffer, availability, start_address, calendar_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+      [linkId, req.session.userId, title, parseInt(duration, 10), parseInt(buffer, 10) || 0, JSON.stringify(availability), startAddress, calendarId]
     );
     res.status(201).json({ linkId });
   } catch (error) {
@@ -131,14 +152,14 @@ app.post('/api/links', async (req, res) => {
 app.put('/api/links/:id', async (req, res) => {
     if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
     const { id } = req.params;
-    const { title, duration, buffer, availability, startAddress } = req.body;
-    if (!title || !duration || !availability || !Array.isArray(availability) || !startAddress) {
+    const { title, duration, buffer, availability, startAddress, calendarId } = req.body;
+    if (!title || !duration || !availability || !Array.isArray(availability) || !startAddress || !calendarId) {
         return res.status(400).send('Ongeldige invoer.');
     }
     try {
         const { rowCount } = await pool.query(
-            'UPDATE links SET title = $1, duration = $2, buffer = $3, availability = $4, start_address = $5 WHERE id = $6 AND user_id = $7',
-            [title, parseInt(duration, 10), parseInt(buffer, 10) || 0, JSON.stringify(availability), startAddress, id, req.session.userId]
+            'UPDATE links SET title = $1, duration = $2, buffer = $3, availability = $4, start_address = $5, calendar_id = $6 WHERE id = $7 AND user_id = $8',
+            [title, parseInt(duration, 10), parseInt(buffer, 10) || 0, JSON.stringify(availability), startAddress, calendarId, id, req.session.userId]
         );
         if (rowCount === 0) {
             return res.status(404).send('Link niet gevonden of geen toestemming.');
@@ -202,7 +223,7 @@ app.get('/get-availability', async (req, res) => {
     if (linkResult.rows.length === 0) return res.status(404).send('Link niet gevonden.');
     
     const linkInfo = linkResult.rows[0];
-    const { user_id: userId, title, duration, buffer, availability, start_address: startAddress } = linkInfo;
+    const { user_id: userId, title, duration, buffer, availability, start_address: startAddress, calendar_id: calendarId } = linkInfo;
 
     const userResult = await pool.query('SELECT tokens FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) return res.status(404).send('Gebruiker niet gevonden.');
@@ -222,7 +243,7 @@ app.get('/get-availability', async (req, res) => {
     const timeMax = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 8).toISOString();
 
     const eventsResponse = await calendar.events.list({
-      calendarId: 'primary',
+      calendarId: calendarId || 'primary',
       timeMin,
       timeMax,
       singleEvents: true,
@@ -295,7 +316,7 @@ app.post('/book-appointment', async (req, res) => {
     const linkResult = await pool.query('SELECT * FROM links WHERE id = $1', [linkId]);
     if (linkResult.rows.length === 0) return res.status(404).send('Link niet gevonden.');
 
-    const { user_id: userId, title, duration, start_address: startAddress } = linkResult.rows[0];
+    const { user_id: userId, title, duration, start_address: startAddress, calendar_id: calendarId } = linkResult.rows[0];
 
     const userResult = await pool.query('SELECT tokens FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) return res.status(404).send('Gebruiker niet gevonden.');
@@ -322,7 +343,7 @@ app.post('/book-appointment', async (req, res) => {
       attendees: [{ email }],
       reminders: { useDefault: false, overrides: [{ method: 'email', minutes: 24 * 60 }, { method: 'popup', minutes: 10 }] },
     };
-    await calendar.events.insert({ calendarId: 'primary', resource: mainEvent, sendNotifications: true });
+    await calendar.events.insert({ calendarId: calendarId || 'primary', resource: mainEvent, sendNotifications: true });
 
     // Create travel time event
     const travelTimeSeconds = await getTravelTime(startAddress, destinationAddress);
@@ -335,7 +356,7 @@ app.post('/book-appointment', async (req, res) => {
         end: { dateTime: appointmentStart.toISOString(), timeZone: 'Europe/Amsterdam' },
         transparency: 'opaque', // Marks user as busy
       };
-      await calendar.events.insert({ calendarId: 'primary', resource: travelEvent });
+      await calendar.events.insert({ calendarId: calendarId || 'primary', resource: travelEvent });
     }
 
     res.status(200).send('Afspraak succesvol ingepland.');
