@@ -118,9 +118,12 @@
                             <h6 class="mb-0">${link.title}</h6>
                             <a href="${shareUrl}" target="_blank" class="text-muted small">${shareUrl}</a>
                         </div>
-                        <div>
-                            <button class="btn btn-sm btn-outline-secondary me-2 edit-btn" data-link-id="${link.id}"><i class="bi bi-pencil"></i></button>
-                            <button class="btn btn-sm btn-outline-danger delete-btn" data-link-id="${link.id}"><i class="bi bi-trash"></i></button>
+                        <div class="d-flex align-items-center">
+                            <button class="btn btn-primary copy-btn me-2" data-share-url="${shareUrl}" title="Kopieer link">
+                                <i class="bi bi-clipboard"></i> Kopieer
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary edit-btn me-2" data-link-id="${link.id}" title="Bewerk"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-outline-danger delete-btn" data-link-id="${link.id}" title="Verwijder"><i class="bi bi-trash"></i></button>
                         </div>
                     `;
                     list.appendChild(item);
@@ -169,6 +172,25 @@
         document.getElementById('links-list').addEventListener('click', async (e) => {
             const editBtn = e.target.closest('.edit-btn');
             const deleteBtn = e.target.closest('.delete-btn');
+            const copyBtn = e.target.closest('.copy-btn');
+
+            if (copyBtn) {
+                const urlToCopy = copyBtn.dataset.shareUrl;
+                navigator.clipboard.writeText(urlToCopy).then(() => {
+                    const originalText = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '<i class="bi bi-check-lg"></i> Gekopieerd!';
+                    copyBtn.classList.remove('btn-primary');
+                    copyBtn.classList.add('btn-success');
+                    setTimeout(() => {
+                        copyBtn.innerHTML = originalText;
+                        copyBtn.classList.remove('btn-success');
+                        copyBtn.classList.add('btn-primary');
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    alert('Kopiëren mislukt.');
+                });
+            }
 
             if (editBtn) {
                 const linkId = editBtn.dataset.linkId;
@@ -208,14 +230,11 @@
         });
 
         // --- Google Maps Autocomplete ---
-        function initAutocomplete() {
-            const addressInput = document.getElementById('startAddress');
-            if (addressInput) {
-                autocomplete = new google.maps.places.Autocomplete(addressInput, {
-                    types: ['address'],
-                    componentRestrictions: { country: 'nl' },
-                });
-            }
+        let Autocomplete; // Keep a global reference to the class
+
+        function onGoogleMapsLoaded() {
+            Autocomplete = google.maps.places.Autocomplete;
+            // Now that the library is loaded, we can safely attach it when the modal opens.
         }
 
         async function loadGoogleMapsScript() {
@@ -230,11 +249,11 @@
                     console.error('Google Maps API Key is missing.');
                     return;
                 }
-                // Make initMap globally available for the callback
-                window.initMap = initAutocomplete;
+                // Make the callback function globally available
+                window.onGoogleMapsLoaded = onGoogleMapsLoaded;
                 
                 const script = document.createElement('script');
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&libraries=places&callback=initMap&loading=async`;
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&libraries=places&callback=onGoogleMapsLoaded&loading=async`;
                 script.async = true;
                 script.defer = true;
                 document.head.appendChild(script);
@@ -250,11 +269,17 @@
             renderAvailabilitySchedule();
         });
 
-        // Re-initialize autocomplete when modal is shown, as the input field is only available then.
+        // Attach autocomplete when modal is shown
         const linkModal = document.getElementById('link-modal');
         linkModal.addEventListener('shown.bs.modal', () => {
-            if (window.google && window.google.maps) {
-                initAutocomplete();
+            const addressInput = document.getElementById('startAddress');
+            // Check if the Autocomplete class is available and not already attached
+            if (Autocomplete && addressInput && !addressInput.dataset.autocompleteAttached) {
+                new Autocomplete(addressInput, {
+                    types: ['address'],
+                    componentRestrictions: { country: 'nl' },
+                });
+                addressInput.dataset.autocompleteAttached = 'true'; // Mark as attached
             }
         });
     </script>

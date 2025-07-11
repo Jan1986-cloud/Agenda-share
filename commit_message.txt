@@ -1,1 +1,1 @@
-Fix: Re-initialize autocomplete on modal open
+Fix: Autocomplete and add copy button
