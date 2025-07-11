@@ -17,22 +17,6 @@
 </head>
 <body>
     <div class="container my-5">
-        <div class="row mb-4">
-            <div class="col-md-8">
-                <h1 class="h2">Dashboard</h1>
-            </div>
-            <div class="col-md-4">
-                <div class="card text-center">
-                    <a href="/appointments.html" class="text-decoration-none text-dark">
-                        <div class="card-body">
-                            <h5 class="card-title">Totaal Afspraken</h5>
-                            <p class="card-text fs-2 fw-bold" id="stats-count">0</p>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        </div>
-
         <!-- Main Form for Creating/Editing Links -->
         <div class="card shadow-sm mb-5">
             <div class="card-body p-4 p-md-5">
@@ -114,16 +98,6 @@
             document.getElementById('linkId').value = '';
             document.getElementById('clear-form-btn').style.display = 'none';
             renderAvailabilitySchedule();
-        }
-
-        async function loadStats() {
-            try {
-                const response = await fetch('/api/appointments/stats');
-                const data = await response.json();
-                document.getElementById('stats-count').textContent = data.count;
-            } catch (error) {
-                console.error('Error loading stats:', error);
-            }
         }
 
         async function loadCalendars() {
@@ -278,23 +252,13 @@
 
         document.getElementById('clear-form-btn').addEventListener('click', resetForm);
 
-        let googleApiLoaded = false;
-        window.initMap = function() {
-            googleApiLoaded = true;
-            const linkModal = document.getElementById('link-modal');
-            if (linkModal.classList.contains('show')) {
-                initAutocomplete();
-            }
-        };
-
         function initAutocomplete() {
             const addressInput = document.getElementById('startAddress');
-            if (googleApiLoaded && addressInput && !addressInput.dataset.autocompleteAttached) {
+            if (addressInput && !autocomplete) { // Only init if it doesn't exist
                 autocomplete = new google.maps.places.Autocomplete(addressInput, {
                     types: ['address'],
                     componentRestrictions: { country: 'nl' },
                 });
-                addressInput.dataset.autocompleteAttached = 'true';
             }
         }
 
@@ -310,6 +274,8 @@
                     console.error('Google Maps API Key is missing.');
                     return;
                 }
+                window.initMap = initAutocomplete;
+                
                 const script = document.createElement('script');
                 script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&libraries=places&callback=initMap&loading=async`;
                 script.async = true;
@@ -323,20 +289,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadLinks();
             loadCalendars();
-            loadStats();
             loadGoogleMapsScript();
             renderAvailabilitySchedule();
-        });
-
-        const linkModal = document.getElementById('link-modal');
-        linkModal.addEventListener('shown.bs.modal', initAutocomplete);
-        linkModal.addEventListener('hidden.bs.modal', () => {
-            const addressInput = document.getElementById('startAddress');
-            if (addressInput) {
-                addressInput.dataset.autocompleteAttached = '';
-                const pacContainers = document.querySelectorAll('.pac-container');
-                pacContainers.forEach(elem => elem.remove());
-            }
         });
     </script>
 </body>
