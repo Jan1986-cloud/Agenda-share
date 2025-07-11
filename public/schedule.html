@@ -1,66 +1,97 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Plan een afspraak</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <style>
-        body { background-color: #f8f9fa; }
-        .container { max-width: 700px; }
-        .card { border-radius: 0.75rem; }
+      body {
+        background-color: #f8f9fa;
+      }
+      .container {
+        max-width: 700px;
+      }
+      .card {
+        border-radius: 0.75rem;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container mt-5">
-        <div class="card shadow-sm">
-            <div class="card-body p-5">
-                <!-- View 1: Address Input -->
-                <div id="address-view">
-                    <h1 id="appointment-title-main" class="card-title text-center mb-4">Plan uw afspraak</h1>
-                    <p class="text-center text-muted mb-4">Voer uw adres in om de reistijd te berekenen en beschikbare tijden te zien.</p>
-                    <div class="mb-3">
-                        <label for="destinationAddress" class="form-label fs-5">Uw afspraakadres</label>
-                        <input type="text" class="form-control form-control-lg" id="destinationAddress" placeholder="Begin met typen..." required>
-                    </div>
-                    <div class="d-grid">
-                        <button id="check-availability-btn" class="btn btn-primary btn-lg">Toon beschikbare tijden</button>
-                    </div>
-                </div>
-                <!-- Other views remain the same -->
-                <div id="loading-view" style="display: none;" class="text-center">
-                    <div class="spinner-border" role="status"><span class="visually-hidden">Laden...</span></div>
-                    <p class="mt-3">Beschikbaarheid wordt berekend...</p>
-                </div>
-                <div id="booking-view" style="display: none;">
-                    <!-- ... -->
-                </div>
-                <div id="confirmation-view" style="display: none;" class="text-center">
-                    <!-- ... -->
-                </div>
-                <div id="error-view" style="display: none;" class="text-center">
-                    <!-- ... -->
-                </div>
+      <div class="card shadow-sm">
+        <div class="card-body p-5">
+          <!-- View 1: Address Input -->
+          <div id="address-view">
+            <h1 id="appointment-title-main" class="card-title text-center mb-4">
+              Plan uw afspraak
+            </h1>
+            <p class="text-center text-muted mb-4">
+              Voer uw adres in om de reistijd te berekenen en beschikbare tijden
+              te zien.
+            </p>
+            <div class="mb-3">
+              <label for="destinationAddress" class="form-label fs-5"
+                >Uw afspraakadres</label
+              >
+              <input
+                type="text"
+                class="form-control form-control-lg"
+                id="destinationAddress"
+                placeholder="Begin met typen..."
+                required
+              />
             </div>
+            <div class="d-grid">
+              <button
+                id="check-availability-btn"
+                class="btn btn-primary btn-lg"
+              >
+                Toon beschikbare tijden
+              </button>
+            </div>
+          </div>
+          <!-- Other views remain the same -->
+          <div id="loading-view" style="display: none" class="text-center">
+            <div class="spinner-border" role="status">
+              <span class="visually-hidden">Laden...</span>
+            </div>
+            <p class="mt-3">Beschikbaarheid wordt berekend...</p>
+          </div>
+          <div id="booking-view" style="display: none">
+            <!-- ... -->
+          </div>
+          <div id="confirmation-view" style="display: none" class="text-center">
+            <!-- ... -->
+          </div>
+          <div id="error-view" style="display: none" class="text-center">
+            <!-- ... -->
+          </div>
         </div>
+      </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // --- All the previous JavaScript logic remains here ---
+      // --- All the previous JavaScript logic remains here ---
     </script>
-    <script async defer
-        src="https://maps.googleapis.com/maps/api/js?key=<%= process.env.GOOGLE_MAPS_API_KEY %>&libraries=places&callback=initAutocomplete">
-    </script>
+    <script
+      async
+      defer
+      src="https://maps.googleapis.com/maps/api/js?key=<%= process.env.GOOGLE_MAPS_API_KEY %>&libraries=places&callback=initAutocomplete"
+    ></script>
     <script>
-        let autocomplete;
-        function initAutocomplete() {
-            const input = document.getElementById('destinationAddress');
-            autocomplete = new google.maps.places.Autocomplete(input, {
-                types: ['address'],
-                componentRestrictions: { 'country': 'nl' } // Restrict to Netherlands
-            });
-        }
+      let autocomplete;
+      function initAutocomplete() {
+        const input = document.getElementById('destinationAddress');
+        autocomplete = new google.maps.places.Autocomplete(input, {
+          types: ['address'],
+          componentRestrictions: { country: 'nl' }, // Restrict to Netherlands
+        });
+      }
     </script>
-</body>
+  </body>
 </html>
