@@ -16,61 +16,51 @@
     </style>
 </head>
 <body>
-    <div class="container mt-5">
+    <div class="container my-5">
+        <!-- Main Form for Creating/Editing Links -->
+        <div class="card shadow-sm mb-5">
+            <div class="card-body p-4 p-md-5">
+                <h1 class="h2 mb-4" id="form-title">Nieuwe Link Aanmaken</h1>
+                <form id="link-form">
+                    <input type="hidden" id="linkId" />
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Titel van de afspraak</label>
+                        <input type="text" class="form-control" id="title" placeholder="Bijv. Kennismakingsgesprek" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="startAddress" class="form-label">Uw vaste vertrekadres</label>
+                        <input type="text" class="form-control" id="startAddress" placeholder="Begin met typen..." required />
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="duration" class="form-label">Duur (minuten)</label>
+                            <input type="number" class="form-control" id="duration" value="30" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="buffer" class="form-label">Buffertijd (minuten)</label>
+                            <input type="number" class="form-control" id="buffer" value="15" placeholder="Tijd tussen afspraken" />
+                        </div>
+                    </div>
+                    <hr class="my-4" />
+                    <h6 class="mb-3">Wekelijkse beschikbaarheid</h6>
+                    <div id="availability-schedule"></div>
+                    <div class="d-flex justify-content-end align-items-center mt-4">
+                         <button type="button" class="btn btn-secondary me-2" id="clear-form-btn" style="display: none;">Annuleren</button>
+                        <button type="submit" class="btn btn-primary" id="save-link-btn">Link Opslaan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- List of Existing Links -->
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h2">Mijn Deelbare Links</h1>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#link-modal" id="new-link-btn">
-                <i class="bi bi-plus-lg"></i> Nieuwe Link
-            </button>
+            <h2 class="h3">Mijn Bestaande Links</h2>
         </div>
         <div class="card shadow-sm">
             <div class="card-body p-0">
                 <ul class="list-group list-group-flush" id="links-list">
-                    <!-- Links will be loaded here -->
                     <li class="list-group-item p-4 text-center text-muted" id="loading-links">Links worden geladen...</li>
                 </ul>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal for Create/Edit Link -->
-    <div class="modal fade" id="link-modal" tabindex="-1" aria-labelledby="modal-title" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modal-title">Nieuwe Link Aanmaken</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="link-form">
-                        <input type="hidden" id="linkId" />
-                        <div class="mb-3">
-                            <label for="title" class="form-label">Titel van de afspraak</label>
-                            <input type="text" class="form-control" id="title" placeholder="Bijv. Kennismakingsgesprek" required />
-                        </div>
-                        <div class="mb-3">
-                            <label for="startAddress" class="form-label">Uw vaste vertrekadres</label>
-                            <input type="text" class="form-control" id="startAddress" placeholder="Begin met typen..." required />
-                        </div>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label for="duration" class="form-label">Duur (minuten)</label>
-                                <input type="number" class="form-control" id="duration" value="30" required />
-                            </div>
-                            <div class="col-md-6">
-                                <label for="buffer" class="form-label">Buffertijd (minuten)</label>
-                                <input type="number" class="form-control" id="buffer" value="15" placeholder="Tijd tussen afspraken" />
-                            </div>
-                        </div>
-                        <hr class="my-4" />
-                        <h6 class="mb-3">Wekelijkse beschikbaarheid</h6>
-                        <div id="availability-schedule"></div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuleren</button>
-                    <button type="submit" form="link-form" class="btn btn-primary" id="save-link-btn">Link Opslaan</button>
-                </div>
             </div>
         </div>
     </div>
@@ -96,6 +86,14 @@
             });
             html += '</div>';
             container.innerHTML = html;
+        }
+
+        function resetForm() {
+            document.getElementById('form-title').textContent = 'Nieuwe Link Aanmaken';
+            document.getElementById('link-form').reset();
+            document.getElementById('linkId').value = '';
+            document.getElementById('clear-form-btn').style.display = 'none';
+            renderAvailabilitySchedule();
         }
 
         async function loadLinks() {
@@ -162,7 +160,7 @@
                     body: JSON.stringify(data),
                 });
                 if (!response.ok) throw new Error('Opslaan van link mislukt.');
-                bootstrap.Modal.getInstance(document.getElementById('link-modal')).hide();
+                resetForm();
                 loadLinks();
             } catch (error) {
                 alert(error.message);
@@ -194,18 +192,20 @@
 
             if (editBtn) {
                 const linkId = editBtn.dataset.linkId;
-                const response = await fetch('/api/links'); // In a real app, you'd fetch one: /api/links/:id
+                const response = await fetch('/api/links');
                 const links = await response.json();
                 const link = links.find(l => l.id === linkId);
                 
-                document.getElementById('modal-title').textContent = 'Link Bewerken';
+                document.getElementById('form-title').textContent = 'Link Bewerken';
                 document.getElementById('linkId').value = link.id;
                 document.getElementById('title').value = link.title;
                 document.getElementById('duration').value = link.duration;
                 document.getElementById('buffer').value = link.buffer;
                 document.getElementById('startAddress').value = link.start_address;
                 renderAvailabilitySchedule(link.availability);
-                new bootstrap.Modal(document.getElementById('link-modal')).show();
+                
+                document.getElementById('clear-form-btn').style.display = 'inline-block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
 
             if (deleteBtn) {
@@ -222,19 +222,16 @@
             }
         });
 
-        document.getElementById('new-link-btn').addEventListener('click', () => {
-            document.getElementById('modal-title').textContent = 'Nieuwe Link Aanmaken';
-            document.getElementById('link-form').reset();
-            document.getElementById('linkId').value = '';
-            renderAvailabilitySchedule();
-        });
+        document.getElementById('clear-form-btn').addEventListener('click', resetForm);
 
-        // --- Google Maps Autocomplete ---
-        let Autocomplete; // Keep a global reference to the class
-
-        function onGoogleMapsLoaded() {
-            Autocomplete = google.maps.places.Autocomplete;
-            // Now that the library is loaded, we can safely attach it when the modal opens.
+        function initAutocomplete() {
+            const addressInput = document.getElementById('startAddress');
+            if (addressInput) {
+                autocomplete = new google.maps.places.Autocomplete(addressInput, {
+                    types: ['address'],
+                    componentRestrictions: { country: 'nl' },
+                });
+            }
         }
 
         async function loadGoogleMapsScript() {
@@ -249,11 +246,10 @@
                     console.error('Google Maps API Key is missing.');
                     return;
                 }
-                // Make the callback function globally available
-                window.onGoogleMapsLoaded = onGoogleMapsLoaded;
+                window.initMap = initAutocomplete;
                 
                 const script = document.createElement('script');
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&libraries=places&callback=onGoogleMapsLoaded&loading=async`;
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&libraries=places&callback=initMap&loading=async`;
                 script.async = true;
                 script.defer = true;
                 document.head.appendChild(script);
@@ -262,37 +258,10 @@
             }
         }
         
-        // Initialize everything on DOM content loaded
         document.addEventListener('DOMContentLoaded', () => {
             loadLinks();
             loadGoogleMapsScript();
             renderAvailabilitySchedule();
-        });
-
-        // Attach autocomplete when modal is shown
-        const linkModal = document.getElementById('link-modal');
-        linkModal.addEventListener('shown.bs.modal', () => {
-            const addressInput = document.getElementById('startAddress');
-            // Check if the Autocomplete class from Google is available and not already attached
-            if (window.google && window.google.maps.places && addressInput && !addressInput.dataset.autocompleteAttached) {
-                autocomplete = new google.maps.places.Autocomplete(addressInput, {
-                    types: ['address'],
-                    componentRestrictions: { country: 'nl' },
-                });
-                // Mark as attached to prevent re-initialization
-                addressInput.dataset.autocompleteAttached = 'true';
-            }
-        });
-
-        // When the modal is hidden, reset the autocomplete flag so it can be re-attached if the modal is re-opened.
-        linkModal.addEventListener('hidden.bs.modal', () => {
-            const addressInput = document.getElementById('startAddress');
-            if (addressInput) {
-                addressInput.dataset.autocompleteAttached = '';
-                // The following lines remove the pac-container dropdown that Google Maps creates
-                const pacContainers = document.querySelectorAll('.pac-container');
-                pacContainers.forEach(elem => elem.remove());
-            }
         });
     </script>
 </body>

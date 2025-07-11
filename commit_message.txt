@@ -1,1 +1,1 @@
-Fix: Final fixes for data, autocomplete and share link
+Refactor: Simplify dashboard UI and fix autocomplete
