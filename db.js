@@ -3,9 +3,7 @@ const { Pool } = pg;
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  // De ssl-configuratie wordt automatisch uit de connectionString gehaald op Railway
 });
 
 export const testConnection = async () => {

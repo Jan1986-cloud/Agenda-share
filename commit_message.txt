@@ -1,1 +1,1 @@
-Fix: Add robust DB connection test and fix availability parsing
+Fix: Simplify database connection for Railway environment
