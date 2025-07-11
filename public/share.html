@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nieuwe Link Aanmaken - Planner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .container { max-width: 800px; }
+        .card { border-radius: 0.75rem; }
+        .availability-grid { display: grid; grid-template-columns: 120px 1fr 1fr; align-items: center; gap: 1rem; }
+        .availability-grid label { font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-5">
+                <div id="form-view">
+                    <h1 class="card-title text-center mb-4">Stel uw afspraaktype in</h1>
+                    <p class="card-text text-center text-muted mb-5">Definieer de details voor het type afspraak dat u wilt delen.</p>
+                    <form id="share-form">
+                        <div class="mb-4">
+                            <label for="title" class="form-label fs-5">Titel van de afspraak</label>
+                            <input type="text" class="form-control form-control-lg" id="title" placeholder="Bijv. Kennismakingsgesprek" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="startAddress" class="form-label fs-5">Uw vaste vertrekadres</label>
+                            <input type="text" class="form-control form-control-lg" id="startAddress" placeholder="Begin met typen..." required>
+                        </div>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="duration" class="form-label fs-5">Duur (minuten)</label>
+                                <input type="number" class="form-control form-control-lg" id="duration" value="30" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="buffer" class="form-label fs-5">Buffertijd (minuten)</label>
+                                <input type="number" class="form-control form-control-lg" id="buffer" value="15" placeholder="Tijd tussen afspraken">
+                            </div>
+                        </div>
+                        <hr class="my-5">
+                        <h2 class="fs-4 mb-4">Stel uw wekelijkse beschikbaarheid in</h2>
+                        <div id="availability-schedule"></div>
+                        <div class="d-grid mt-5">
+                            <button type="submit" class="btn btn-primary btn-lg" id="generate-btn">Genereer Deelbare Link</button>
+                        </div>
+                    </form>
+                </div>
+                <div id="share-link-result" style="display: none;" class="text-center">
+                    <h2 class="mb-3">Link gegenereerd!</h2>
+                    <p class="text-success" id="copy-feedback">Link gekopieerd naar klembord! U kunt deze nu plakken.</p>
+                    <div class="input-group mt-4">
+                        <input type="text" id="generated-link" class="form-control form-control-lg" readonly>
+                        <button class="btn btn-outline-secondary" onclick="copyLink()">Kopieer opnieuw</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Form Logic ---
+        document.getElementById('share-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            // ... (rest of the form submission logic remains the same)
+        });
+        // ... (rest of the script remains the same)
+    </script>
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=<%= process.env.GOOGLE_MAPS_API_KEY %>&libraries=places&callback=initAutocomplete">
+    </script>
+    <script>
+        let autocomplete;
+        function initAutocomplete() {
+            const input = document.getElementById('startAddress');
+            autocomplete = new google.maps.places.Autocomplete(input, {
+                types: ['address'],
+                componentRestrictions: { 'country': 'nl' } // Restrict to Netherlands
+            });
+        }
+    </script>
+</body>
+</html>

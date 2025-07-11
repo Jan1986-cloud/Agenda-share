@@ -1,0 +1,24 @@
+{
+  "name": "pv-monteur-planner-backend",
+  "version": "1.0.0",
+  "description": "Backend server voor de afsprakenplanner",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "PV Monteur",
+  "license": "ISC",
+  "dependencies": {
+    "@google-cloud/local-auth": "^3.0.1",
+    "body-parser": "^2.2.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1",
+    "googleapis": "^140.0.1",
+    "node-fetch": "^2.7.0",
+    "pg": "^8.16.3",
+    "uuid": "^11.1.0"
+  }
+}
