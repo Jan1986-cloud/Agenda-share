@@ -202,8 +202,7 @@ app.get('/get-availability', async (req, res) => {
     if (linkResult.rows.length === 0) return res.status(404).send('Link niet gevonden.');
     
     const linkInfo = linkResult.rows[0];
-    const { user_id: userId, title, duration, buffer, start_address: startAddress } = linkInfo;
-    const availability = JSON.parse(linkInfo.availability);
+    const { user_id: userId, title, duration, buffer, availability, start_address: startAddress } = linkInfo;
 
     const userResult = await pool.query('SELECT tokens FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) return res.status(404).send('Gebruiker niet gevonden.');
