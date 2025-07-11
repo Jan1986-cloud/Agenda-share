@@ -140,10 +140,13 @@
         let html = '<div class="availability-grid">';
 
         days.forEach((day, index) => {
+          const isWeekday = index >= 1 && index <= 5;
+          const startTime = isWeekday ? '09:00' : '';
+          const endTime = isWeekday ? '17:00' : '';
           html += `
             <label>${day}</label>
-            <input type="time" class="form-control" id="start-time-${index}" />
-            <input type="time" class="form-control" id="end-time-${index}" />
+            <input type="time" class="form-control" id="start-time-${index}" value="${startTime}" />
+            <input type="time" class="form-control" id="end-time-${index}" value="${endTime}" />
           `;
         });
 

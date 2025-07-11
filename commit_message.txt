@@ -1,1 +1,1 @@
-Fix: Update Google Maps API implementation
+Fix: Solve 403 error and pre-fill schedule

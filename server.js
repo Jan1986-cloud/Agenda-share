@@ -21,14 +21,17 @@ app.use(bodyParser.json());
 app.use(express.static('public'));
 app.use(cookieParser());
 
-app.set('trust proxy', 1);
+app.set('trust proxy', true);
 
 app.use(
   session({
     secret: process.env.SESSION_SECRET || uuidv4(),
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === 'production' },
+    cookie: { 
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' 
+    },
   })
 );
 
