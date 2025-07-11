@@ -1,1 +1,1 @@
-Feat: Redesign schedule page with two-column picker
+Fix: Add phone number and improve slot generation

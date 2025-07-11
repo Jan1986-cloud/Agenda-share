@@ -104,6 +104,10 @@
                 <label for="email" class="form-label">Uw e-mailadres</label>
                 <input type="email" id="email" class="form-control" required />
               </div>
+              <div class="mb-3">
+                <label for="phone" class="form-label">Uw telefoonnummer</label>
+                <input type="tel" id="phone" class="form-control" required />
+              </div>
               <div class="d-grid">
                 <button type="submit" class="btn btn-success btn-lg">
                   Afspraak bevestigen
@@ -166,15 +170,24 @@
           const processedSlots = new Map();
           for (const [dayString, daySlots] of slotsByDay.entries()) {
               const thirtyMinSlots = new Set();
-              const earliest = new Date(Math.min(...daySlots.map(s => s.start.getTime())));
-              const latest = new Date(Math.max(...daySlots.map(s => s.end.getTime())));
+              // Find the absolute start and end for the entire day's availability
+              const dayStart = new Date(Math.min(...daySlots.map(s => s.start.getTime())));
+              const dayEnd = new Date(Math.max(...daySlots.map(s => s.end.getTime())));
 
-              let currentTime = new Date(earliest);
+              // Start iterating from the beginning of the day's availability
+              let currentTime = new Date(dayStart);
+              // Round up to the next 30-minute mark to start
               currentTime.setSeconds(0, 0);
-              currentTime.setMinutes(Math.ceil(currentTime.getMinutes() / 30) * 30);
+              if (currentTime.getMinutes() > 30) {
+                  currentTime.setHours(currentTime.getHours() + 1, 0);
+              } else if (currentTime.getMinutes() > 0) {
+                  currentTime.setMinutes(30);
+              }
 
-              while (currentTime < latest) {
+              while (currentTime < dayEnd) {
                   const slotEndTime = new Date(currentTime.getTime() + durationMinutes * 60000);
+                  
+                  // Check if this clean slot fits within any of the raw availability windows
                   let isAvailable = false;
                   for (const rawSlot of daySlots) {
                       if (currentTime >= rawSlot.start && slotEndTime <= rawSlot.end) {
@@ -182,11 +195,15 @@
                           break;
                       }
                   }
+                  
                   if (isAvailable) {
                       thirtyMinSlots.add(currentTime.toTimeString().substring(0, 5));
                   }
+                  
+                  // Move to the next 30-minute interval
                   currentTime.setMinutes(currentTime.getMinutes() + 30);
               }
+
               if (thirtyMinSlots.size > 0) {
                   processedSlots.set(dayString, Array.from(thirtyMinSlots).sort());
               }
@@ -268,13 +285,14 @@
         e.preventDefault();
         const name = document.getElementById('name').value;
         const email = document.getElementById('email').value;
+        const phone = document.getElementById('phone').value;
         const destinationAddress = document.getElementById('destinationAddress').value;
 
         try {
           const response = await fetch('/book-appointment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ linkId, startTime: selectedDate.toISOString(), name, email, destinationAddress }),
+            body: JSON.stringify({ linkId, startTime: selectedDate.toISOString(), name, email, destinationAddress, phone }),
           });
           if (!response.ok) throw new Error('Kon de afspraak niet boeken.');
           switchView('confirmation-view');

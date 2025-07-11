@@ -365,10 +365,9 @@ app.get('/get-availability', async (req, res) => {
   }
 });
 
-// Book an appointment
 app.post('/book-appointment', async (req, res) => {
-  const { linkId, startTime, name, email, destinationAddress } = req.body;
-  if (!linkId || !startTime || !name || !email || !destinationAddress) {
+  const { linkId, startTime, name, email, destinationAddress, phone } = req.body;
+  if (!linkId || !startTime || !name || !email || !destinationAddress || !phone) {
     return res.status(400).send('Alle velden zijn verplicht.');
   }
 
@@ -409,7 +408,7 @@ app.post('/book-appointment', async (req, res) => {
 
     const event = {
       summary: title,
-      description: `Afspraak met ${name}.`,
+      description: `Afspraak met ${name} (${phone}).`,
       location: destinationAddress,
       start: { dateTime: startTime, timeZone: 'Europe/Amsterdam' },
       end: {
