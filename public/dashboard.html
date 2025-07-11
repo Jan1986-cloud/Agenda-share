@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard - Planner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .container { max-width: 960px; }
+        .card { border-radius: 0.75rem; }
+        .availability-grid { display: grid; grid-template-columns: 120px 1fr 1fr; align-items: center; gap: 1rem; }
+        .link-item { transition: background-color 0.2s ease-in-out; }
+        .link-item:hover { background-color: #f1f3f5; }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h2">Mijn Deelbare Links</h1>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#link-modal" id="new-link-btn">
+                <i class="bi bi-plus-lg"></i> Nieuwe Link
+            </button>
+        </div>
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush" id="links-list">
+                    <!-- Links will be loaded here -->
+                    <li class="list-group-item p-4 text-center text-muted" id="loading-links">Links worden geladen...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Create/Edit Link -->
+    <div class="modal fade" id="link-modal" tabindex="-1" aria-labelledby="modal-title" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modal-title">Nieuwe Link Aanmaken</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="link-form">
+                        <input type="hidden" id="linkId" />
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Titel van de afspraak</label>
+                            <input type="text" class="form-control" id="title" placeholder="Bijv. Kennismakingsgesprek" required />
+                        </div>
+                        <div class="mb-3">
+                            <label for="startAddress" class="form-label">Uw vaste vertrekadres</label>
+                            <input type="text" class="form-control" id="startAddress" placeholder="Begin met typen..." required />
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label for="duration" class="form-label">Duur (minuten)</label>
+                                <input type="number" class="form-control" id="duration" value="30" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label for="buffer" class="form-label">Buffertijd (minuten)</label>
+                                <input type="number" class="form-control" id="buffer" value="15" placeholder="Tijd tussen afspraken" />
+                            </div>
+                        </div>
+                        <hr class="my-4" />
+                        <h6 class="mb-3">Wekelijkse beschikbaarheid</h6>
+                        <div id="availability-schedule"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" form="link-form" class="btn btn-primary" id="save-link-btn">Link Opslaan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let mapsApiKey = null;
+        let autocomplete;
+
+        function renderAvailabilitySchedule(availability = []) {
+            const container = document.getElementById('availability-schedule');
+            const days = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
+            let html = '<div class="availability-grid">';
+            days.forEach((day, index) => {
+                const rule = availability.find(r => r.dayOfWeek === index) || {};
+                const startTime = rule.startTime || (index >= 1 && index <= 5 ? '09:00' : '');
+                const endTime = rule.endTime || (index >= 1 && index <= 5 ? '17:00' : '');
+                html += `
+                    <label>${day}</label>
+                    <input type="time" class="form-control" id="start-time-${index}" value="${startTime}" />
+                    <input type="time" class="form-control" id="end-time-${index}" value="${endTime}" />
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        async function loadLinks() {
+            const list = document.getElementById('links-list');
+            try {
+                const response = await fetch('/api/links');
+                if (!response.ok) throw new Error('Kon links niet laden.');
+                const links = await response.json();
+                list.innerHTML = '';
+                if (links.length === 0) {
+                    list.innerHTML = '<li class="list-group-item p-4 text-center text-muted">U heeft nog geen links aangemaakt.</li>';
+                    return;
+                }
+                links.forEach(link => {
+                    const item = document.createElement('li');
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center p-3 link-item';
+                    const shareUrl = `${window.location.origin}/schedule.html?linkId=${link.id}`;
+                    item.innerHTML = `
+                        <div>
+                            <h6 class="mb-0">${link.title}</h6>
+                            <a href="${shareUrl}" target="_blank" class="text-muted small">${shareUrl}</a>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary me-2 edit-btn" data-link-id="${link.id}"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-outline-danger delete-btn" data-link-id="${link.id}"><i class="bi bi-trash"></i></button>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            } catch (error) {
+                list.innerHTML = `<li class="list-group-item p-4 text-center text-danger">${error.message}</li>`;
+            }
+        }
+
+        document.getElementById('link-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const linkId = document.getElementById('linkId').value;
+            const availability = [];
+            for (let i = 0; i < 7; i++) {
+                const startTime = document.getElementById(`start-time-${i}`).value;
+                const endTime = document.getElementById(`end-time-${i}`).value;
+                if (startTime && endTime) {
+                    availability.push({ dayOfWeek: i, startTime, endTime });
+                }
+            }
+            const data = {
+                title: document.getElementById('title').value,
+                duration: document.getElementById('duration').value,
+                buffer: document.getElementById('buffer').value,
+                startAddress: document.getElementById('startAddress').value,
+                availability,
+            };
+
+            const url = linkId ? `/api/links/${linkId}` : '/api/links';
+            const method = linkId ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+                if (!response.ok) throw new Error('Opslaan van link mislukt.');
+                bootstrap.Modal.getInstance(document.getElementById('link-modal')).hide();
+                loadLinks();
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+        
+        document.getElementById('links-list').addEventListener('click', async (e) => {
+            const editBtn = e.target.closest('.edit-btn');
+            const deleteBtn = e.target.closest('.delete-btn');
+
+            if (editBtn) {
+                const linkId = editBtn.dataset.linkId;
+                const response = await fetch('/api/links'); // In a real app, you'd fetch one: /api/links/:id
+                const links = await response.json();
+                const link = links.find(l => l.id === linkId);
+                
+                document.getElementById('modal-title').textContent = 'Link Bewerken';
+                document.getElementById('linkId').value = link.id;
+                document.getElementById('title').value = link.title;
+                document.getElementById('duration').value = link.duration;
+                document.getElementById('buffer').value = link.buffer;
+                document.getElementById('startAddress').value = link.start_address;
+                renderAvailabilitySchedule(link.availability);
+                new bootstrap.Modal(document.getElementById('link-modal')).show();
+            }
+
+            if (deleteBtn) {
+                const linkId = deleteBtn.dataset.linkId;
+                if (confirm('Weet u zeker dat u deze link wilt verwijderen?')) {
+                    try {
+                        const response = await fetch(`/api/links/${linkId}`, { method: 'DELETE' });
+                        if (!response.ok) throw new Error('Verwijderen mislukt.');
+                        loadLinks();
+                    } catch (error) {
+                        alert(error.message);
+                    }
+                }
+            }
+        });
+
+        document.getElementById('new-link-btn').addEventListener('click', () => {
+            document.getElementById('modal-title').textContent = 'Nieuwe Link Aanmaken';
+            document.getElementById('link-form').reset();
+            document.getElementById('linkId').value = '';
+            renderAvailabilitySchedule();
+        });
+
+        async function initMap() {
+            const { Autocomplete } = await google.maps.importLibrary('places');
+            autocomplete = new Autocomplete(document.getElementById('startAddress'), {
+                types: ['address'],
+                componentRestrictions: { country: 'nl' },
+            });
+        }
+
+        async function loadGoogleMapsScript() {
+            try {
+                if (!mapsApiKey) {
+                    const response = await fetch('/api/config');
+                    if (!response.ok) throw new Error('Kon configuratie niet laden.');
+                    const config = await response.json();
+                    mapsApiKey = config.mapsApiKey;
+                }
+                if (!mapsApiKey) {
+                    console.error('Google Maps API Key is missing.');
+                    return;
+                }
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&libraries=places&callback=initMap&loading=async`;
+                script.async = true;
+                script.defer = true;
+                document.head.appendChild(script);
+            } catch (error) {
+                console.error('Error loading Google Maps:', error);
+            }
+        }
+
+        window.initMap = initMap;
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLinks();
+            loadGoogleMapsScript();
+            renderAvailabilitySchedule();
+        });
+    </script>
+</body>
+</html>

@@ -79,57 +79,91 @@ app.get('/oauth2callback', async (req, res) => {
     );
 
     req.session.userId = userId;
-    res.redirect('/share.html');
+    res.redirect('/dashboard.html');
   } catch (error) {
     console.error('Error during authentication:', error);
     res.status(500).send('Er is een fout opgetreden tijdens de authenticatie.');
   }
 });
 
-app.get('/share.html', (req, res) => {
+app.get('/dashboard.html', (req, res) => {
   if (!req.session.userId) {
     return res.redirect('/');
   }
-  res.sendFile(path.join(__dirname, 'public', 'share.html'));
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
-// Generate a shareable link
-app.post('/generate-link', async (req, res) => {
-  const { userId } = req.session;
-  const { title, duration, buffer, availability, startAddress } = req.body;
+// --- API for Links ---
 
-  if (!userId) return res.status(403).send('Authenticatie vereist.');
-  if (
-    !title ||
-    !duration ||
-    !availability ||
-    !Array.isArray(availability) ||
-    !startAddress
-  ) {
-    return res
-      .status(400)
-      .send('Ongeldige invoer. Alle velden zijn verplicht.');
+// GET all links for the logged-in user
+app.get('/api/links', async (req, res) => {
+  if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
+  try {
+    const { rows } = await pool.query('SELECT * FROM links WHERE user_id = $1 ORDER BY created_at DESC', [req.session.userId]);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching links:', error);
+    res.status(500).send('Fout bij het ophalen van links.');
   }
+});
 
+// POST a new link
+app.post('/api/links', async (req, res) => {
+  if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
+  const { title, duration, buffer, availability, startAddress } = req.body;
+  if (!title || !duration || !availability || !Array.isArray(availability) || !startAddress) {
+    return res.status(400).send('Ongeldige invoer.');
+  }
   try {
     const linkId = uuidv4();
     await pool.query(
       'INSERT INTO links (id, user_id, title, duration, buffer, availability, start_address) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-      [
-        linkId,
-        userId,
-        title,
-        parseInt(duration, 10),
-        parseInt(buffer, 10) || 0,
-        JSON.stringify(availability),
-        startAddress,
-      ]
+      [linkId, req.session.userId, title, parseInt(duration, 10), parseInt(buffer, 10) || 0, JSON.stringify(availability), startAddress]
     );
-    res.json({ linkId });
+    res.status(201).json({ linkId });
   } catch (error) {
-    console.error('Error generating link:', error);
+    console.error('Error creating link:', error);
     res.status(500).send('Fout bij het aanmaken van de link.');
   }
+});
+
+// PUT (update) a link
+app.put('/api/links/:id', async (req, res) => {
+    if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
+    const { id } = req.params;
+    const { title, duration, buffer, availability, startAddress } = req.body;
+    if (!title || !duration || !availability || !Array.isArray(availability) || !startAddress) {
+        return res.status(400).send('Ongeldige invoer.');
+    }
+    try {
+        const { rowCount } = await pool.query(
+            'UPDATE links SET title = $1, duration = $2, buffer = $3, availability = $4, start_address = $5 WHERE id = $6 AND user_id = $7',
+            [title, parseInt(duration, 10), parseInt(buffer, 10) || 0, JSON.stringify(availability), startAddress, id, req.session.userId]
+        );
+        if (rowCount === 0) {
+            return res.status(404).send('Link niet gevonden of geen toestemming.');
+        }
+        res.status(200).send('Link succesvol bijgewerkt.');
+    } catch (error) {
+        console.error('Error updating link:', error);
+        res.status(500).send('Fout bij het bijwerken van de link.');
+    }
+});
+
+// DELETE a link
+app.delete('/api/links/:id', async (req, res) => {
+    if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
+    const { id } = req.params;
+    try {
+        const { rowCount } = await pool.query('DELETE FROM links WHERE id = $1 AND user_id = $2', [id, req.session.userId]);
+        if (rowCount === 0) {
+            return res.status(404).send('Link niet gevonden of geen toestemming.');
+        }
+        res.status(204).send(); // No Content
+    } catch (error) {
+        console.error('Error deleting link:', error);
+        res.status(500).send('Fout bij het verwijderen van de link.');
+    }
 });
 
 app.get('/schedule', (req, res) => {

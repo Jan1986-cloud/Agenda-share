@@ -1,1 +1,1 @@
-Fix: Improve availability logic and add travel time event
+Feat: Implement link management dashboard
