@@ -1,1 +1,1 @@
-Feat: Implement link management dashboard
+Fix: Re-initialize autocomplete on modal open

@@ -207,12 +207,15 @@
             renderAvailabilitySchedule();
         });
 
-        async function initMap() {
-            const { Autocomplete } = await google.maps.importLibrary('places');
-            autocomplete = new Autocomplete(document.getElementById('startAddress'), {
-                types: ['address'],
-                componentRestrictions: { country: 'nl' },
-            });
+        // --- Google Maps Autocomplete ---
+        function initAutocomplete() {
+            const addressInput = document.getElementById('startAddress');
+            if (addressInput) {
+                autocomplete = new google.maps.places.Autocomplete(addressInput, {
+                    types: ['address'],
+                    componentRestrictions: { country: 'nl' },
+                });
+            }
         }
 
         async function loadGoogleMapsScript() {
@@ -227,6 +230,9 @@
                     console.error('Google Maps API Key is missing.');
                     return;
                 }
+                // Make initMap globally available for the callback
+                window.initMap = initAutocomplete;
+                
                 const script = document.createElement('script');
                 script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&libraries=places&callback=initMap&loading=async`;
                 script.async = true;
@@ -236,12 +242,20 @@
                 console.error('Error loading Google Maps:', error);
             }
         }
-
-        window.initMap = initMap;
+        
+        // Initialize everything on DOM content loaded
         document.addEventListener('DOMContentLoaded', () => {
             loadLinks();
             loadGoogleMapsScript();
             renderAvailabilitySchedule();
+        });
+
+        // Re-initialize autocomplete when modal is shown, as the input field is only available then.
+        const linkModal = document.getElementById('link-modal');
+        linkModal.addEventListener('shown.bs.modal', () => {
+            if (window.google && window.google.maps) {
+                initAutocomplete();
+            }
         });
     </script>
 </body>
