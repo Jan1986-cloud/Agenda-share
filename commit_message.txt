@@ -1,1 +1,1 @@
-Fix: Add phone number and improve slot generation
+Fix: Improve availability logic and add travel time event
