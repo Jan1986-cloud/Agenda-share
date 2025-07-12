@@ -281,7 +281,11 @@ app.get('/get-availability', async (req, res) => {
     if (linkResult.rows.length === 0) return res.status(404).send('Link niet gevonden.');
     
     const linkInfo = linkResult.rows[0];
-    const { user_id: userId, title, duration, buffer, start_address: startAddress, calendar_id: calendarId, max_travel_time, workday_mode, include_travel_start, include_travel_end, availability } = linkInfo;
+    const { 
+        user_id: userId, title, duration, buffer, start_address: startAddress, 
+        calendar_id: calendarId, max_travel_time, workday_mode, 
+        include_travel_start, include_travel_end, availability 
+    } = linkInfo;
 
     const userResult = await pool.query('SELECT tokens FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) return res.status(404).send('Gebruiker niet gevonden.');
@@ -308,7 +312,7 @@ app.get('/get-availability', async (req, res) => {
     });
     
     const busySlots = eventsResponse.data.items
-        .filter(e => e.start.dateTime) // Filter out all-day events
+        .filter(e => e.start.dateTime)
         .map(e => ({ 
             start: new Date(e.start.dateTime), 
             end: new Date(e.end.dateTime),
@@ -348,11 +352,13 @@ app.get('/get-availability', async (req, res) => {
 
                 const travelToMs = travelToSeconds * 1000;
                 
-                let appointmentStart = new Date(potentialStartTime.getTime());
+                let appointmentStart;
                 if (workday_mode === 'FLEXIBEL' && prevAppointment) {
                     appointmentStart = new Date(prevAppointment.end.getTime() + travelToMs);
                 } else if (workday_mode === 'FLEXIBEL' && include_travel_start) {
                     appointmentStart = new Date(potentialStartTime.getTime() + travelToMs);
+                } else {
+                    appointmentStart = new Date(potentialStartTime.getTime());
                 }
 
                 const appointmentEnd = new Date(appointmentStart.getTime() + appointmentDurationMs);
@@ -368,8 +374,17 @@ app.get('/get-availability', async (req, res) => {
                 }
 
                 let isAvailable = true;
-                if (appointmentStart < dayStart || totalBlockEnd > dayEnd) {
+                if (appointmentStart < potentialStartTime || appointmentEnd > dayEnd) {
                     isAvailable = false;
+                } else if (nextAppointment && totalBlockEnd > nextAppointment.start) {
+                    isAvailable = false;
+                }
+
+                for (const busy of busySlots) {
+                    if (appointmentStart < busy.end && appointmentEnd > busy.start) {
+                        isAvailable = false;
+                        break;
+                    }
                 }
 
                 if (isAvailable) {
@@ -400,7 +415,7 @@ app.post('/book-appointment', async (req, res) => {
     const linkResult = await pool.query('SELECT * FROM links WHERE id = $1', [linkId]);
     if (linkResult.rows.length === 0) return res.status(404).send('Link niet gevonden.');
 
-    const { user_id: userId, title, duration, start_address: startAddress, calendar_id: calendarId } = linkResult.rows[0];
+    const { user_id: userId, title, duration, calendar_id: calendarId } = linkResult.rows[0];
 
     // Log the appointment
     await pool.query(

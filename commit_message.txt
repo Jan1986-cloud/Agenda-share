@@ -1,1 +1,1 @@
-Fix: Use correct calendarId in get-availability logic
+Feat: Implement final intelligent scheduling logic and persistent sessions
