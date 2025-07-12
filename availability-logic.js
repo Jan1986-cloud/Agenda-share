@@ -1,29 +1,21 @@
 // availability-logic.js
-// Generates a 15-minute grid, blocks volledige reis- én gespreksduur + buffer,
-// retourneert slots als lokale strings in link.timezone, ISO voor booking.
-
 import { addMinutes, isBefore, areIntervalsOverlapping } from 'date-fns';
 import { zonedTimeToUtc } from 'date-fns-tz';
 
 /**
- * @param {Object}  p
- * @param {Object}  p.link
- * @param {Array<{start:Date,end:Date}>} p.busySlots
- * @param {string}  p.destinationAddress
- * @param {function(string,string):Promise<number>} p.getTravelTime – returns seconden
- * @param {number} [p.daysAhead=7]
- * @returns {Promise<Array<{start:string,end:string,start_utc:string}>>}
+ * Hoofdalgoritme: genereert 15-minuten-grid, blokkeert totale reis +
+ * gespreksduur + buffer en geeft slots terug in link.timezone.
  */
 export async function calculateAvailability ({
   link,
-  busySlots,
+  busySlots = [],
   destinationAddress,
   getTravelTime,
   daysAhead = 7
 }) {
   const {
     availability,
-    duration,
+    duration,                     // minuten
     buffer,
     start_address: startAddress,
     workday_mode: workdayMode,
@@ -32,48 +24,53 @@ export async function calculateAvailability ({
     timezone = 'Europe/Amsterdam'
   } = link;
 
-  const busy = busySlots.map(s => ({ start: new Date(s.start), end: new Date(s.end) }));
-  const now  = new Date();
-  const grid = 15;               // minuten
-  const out  = [];
+  const busy = busySlots.map(b => ({ start: new Date(b.start), end: new Date(b.end) }));
+  const results = [];
+  const grid = 15;
+  const today = new Date();
 
   for (let d = 1; d <= daysAhead; d++) {
-    const day   = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + d));
-    const rule  = availability.find(r => r.dayOfWeek === day.getUTCDay());
+    const day = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + d));
+    const rule = availability.find(r => r.dayOfWeek === day.getUTCDay());
     if (!rule) continue;
 
-    const dateISO  = day.toISOString().split('T')[0];                       // YYYY-MM-DD
-    const dayStart = zonedTimeToUtc(`${dateISO} ${rule.startTime}`, timezone);
-    const dayEnd   = zonedTimeToUtc(`${dateISO} ${rule.endTime}` , timezone);
+    // Dagstart/dag-einde in UTC op basis van tijdzone
+    const dateIso = day.toISOString().split('T')[0];
+    const dayStart = zonedTimeToUtc(`${dateIso} ${rule.startTime}`, timezone);
+    const dayEnd   = zonedTimeToUtc(`${dateIso} ${rule.endTime}`,  timezone);
 
-    let cursor = new Date(dayStart);
+    let pointer = new Date(dayStart);
 
-    while (isBefore(addMinutes(cursor, duration), dayEnd)) {
-      const travelStartSec = includeTravelStart ? await getTravelTime(startAddress, destinationAddress) : 0;
-      const travelEndSec   = includeTravelEnd   ? await getTravelTime(destinationAddress, startAddress) : 0;
+    while (isBefore(addMinutes(pointer, duration), dayEnd)) {
 
-      // FLEXIBEL: afspraak begint pas ná reistijd
+      const tStartSec = includeTravelStart ? await getTravelTime(startAddress, destinationAddress) : 0;
+      const tEndSec   = includeTravelEnd   ? await getTravelTime(destinationAddress, startAddress) : 0;
+
+      // FLEXIBEL-modus → afspraak begint pas ná heenreis
       const appointmentStart = workdayMode === 'FLEXIBEL'
-        ? addMinutes(cursor, travelStartSec / 60)
-        : cursor;
+        ? addMinutes(pointer, tStartSec / 60)
+        : pointer;
 
       const appointmentEnd = addMinutes(appointmentStart, duration);
-      const totalStart     = new Date(appointmentStart.getTime() - travelStartSec * 1000);
-      const totalEnd       = new Date(appointmentEnd .getTime() + travelEndSec * 1000);
 
-      const conflict = busy.some(b => areIntervalsOverlapping({ start: totalStart, end: totalEnd }, b));
+      const totalStart = new Date(appointmentStart.getTime() - tStartSec * 1000);
+      const totalEnd   = new Date(appointmentEnd .getTime() + tEndSec * 1000);
 
-      if (!conflict) {
-        out.push({
+      const overlap = busy.some(b =>
+        areIntervalsOverlapping({ start: totalStart, end: totalEnd }, b)
+      );
+
+      if (!overlap) {
+        results.push({
           start     : appointmentStart.toLocaleString('nl-NL', { timeZone: timezone }),
           end       : appointmentEnd .toLocaleString('nl-NL', { timeZone: timezone }),
           start_utc : appointmentStart.toISOString()
         });
-        cursor = addMinutes(totalEnd, buffer);          // voorbij blok + buffer
+        pointer = addMinutes(totalEnd, buffer);      // verder na totaalblok + buffer
       } else {
-        cursor = addMinutes(cursor, grid);              // schuif raster
+        pointer = addMinutes(pointer, grid);         // stap raster
       }
     }
   }
-  return out;
+  return results;
 }
