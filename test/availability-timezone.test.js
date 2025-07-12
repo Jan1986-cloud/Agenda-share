@@ -1,6 +1,9 @@
 // test/availability-timezone.test.js
 import { calculateAvailability } from '../utils/availability-logic.js';
 
+// stub reistijd (override voor elke test)
+const mockGetTravelTime = async () => 0;
+
 const today = new Date();
 const fixedTomorrow = new Date(
   Date.UTC(
@@ -26,15 +29,6 @@ const link = {
   timezone: 'Europe/Amsterdam'
 };
 
-// Mock de reistijd functie voor voorspelbare tests
-// Retourneert reistijd in seconden
-const mockGetTravelTime = async (origin, destination) => {
-    // Return a consistent, non-zero travel time for the test
-    if (destination === 'New York Test Office') {
-        return 1800; // 30 minutes
-    }
-    return 0;
-};
 
 describe('calculateAvailability with Timezone and Travel Time', () => {
     const today = new Date();
@@ -63,7 +57,7 @@ describe('calculateAvailability with Timezone and Travel Time', () => {
             getTravelTime: mockGetTravelTime,
         };
 
-        const slots = await calculateAvailability({ link, ...options });
+        const slots = await calculateAvailability({ link, getTravelTime: mockGetTravelTime, ...options });
 
         // --- Assertions ---
         expect(slots.length).toBeGreaterThan(0);
