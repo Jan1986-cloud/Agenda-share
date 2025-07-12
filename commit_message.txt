@@ -1,1 +1,1 @@
-Feat: Implement advanced, intelligent scheduling logic and persistent sessions
+Fix: Remove redundant JSON.parse causing crash in get-availability
