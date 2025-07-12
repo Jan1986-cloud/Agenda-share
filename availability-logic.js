@@ -1,126 +1,117 @@
-// availability-logic.js
+// utils/availability-logic.js
+// Complete replacement — self‑contained, no external globals required
+// Core idea: generate 15‑minute grid within configured work windows,
+// block out full travel time + appointment + buffer, respect busy events,
+// and return slots converted to the owner’s configured timezone.
+
+import { differenceInMinutes, addMinutes, isBefore, isAfter, areIntervalsOverlapping } from 'date-fns';
 
 /**
- * Berekent de beschikbare afspraak-slots.
- * @param {object} options - De opties voor de berekening.
- * @returns {Array<object>} Een array met beschikbare slots.
+ * @typedef {Object} Link
+ * @property {Array<{dayOfWeek:number,startTime:string,endTime:string}>} availability
+ * @property {number} duration           // minutes
+ * @property {number} buffer             // minutes
+ * @property {string} start_address
+ * @property {number} max_travel_time    // minutes, optional
+ * @property {"VAST"|"FLEXIBEL"} workday_mode
+ * @property {boolean} include_travel_start
+ * @property {boolean} include_travel_end
+ * @property {string} timezone           // e.g. "Europe/Amsterdam"
  */
-export async function calculateAvailability(options) {
-    const {
-        link,
-        busySlots,
-        destinationAddress,
-        getTravelTime,
-    } = options;
 
-    const {
-        availability: availabilityRules,
-        duration: appointmentDuration,
-        buffer,
-        start_address: startAddress,
-        max_travel_time: maxTravelTime,
-        workday_mode: workdayMode,
-        include_travel_start: includeTravelStart,
-        include_travel_end: includeTravelEnd,
-        timezone,
-    } = link;
+/**
+ * @typedef {Object} BusySlot
+ * @property {Date} start
+ * @property {Date} end
+ */
 
-    const availableSlots = [];
-    const appointmentDurationMs = appointmentDuration * 60000;
-    const bufferMs = buffer * 60000;
-    const now = new Date();
+/**
+ * @typedef {Object} SlotResult
+ * @property {string} start         // localised human string
+ * @property {string} end           // localised human string
+ * @property {string} start_utc     // ISO for booking
+ */
 
-    for (let d = 1; d <= 7; d++) {
-        const currentDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + d));
-        const dayOfWeek = currentDay.getUTCDay();
-        const rule = availabilityRules.find(r => r.dayOfWeek === dayOfWeek);
+/**
+ * Calculate availability for the next X days.
+ * @param {Object} opts
+ * @param {Link}   opts.link
+ * @param {BusySlot[]} opts.busySlots   already in UTC dates
+ * @param {string}     opts.destinationAddress
+ * @param {function(string,string):Promise<number>} opts.getTravelTime returns seconds
+ * @param {number} [opts.daysAhead=7]
+ * @returns {Promise<SlotResult[]>}
+ */
+export async function calculateAvailability ({
+  link,
+  busySlots,
+  destinationAddress,
+  getTravelTime,
+  daysAhead = 7
+}) {
+  const {
+    availability,
+    duration,
+    buffer,
+    start_address: startAddress,
+    workday_mode: workdayMode,
+    include_travel_start: includeTravelStart,
+    include_travel_end: includeTravelEnd,
+    timezone = 'Europe/Amsterdam'
+  } = link;
 
-        if (!rule) continue;
+  // Normalize busy slots to blockers including buffer either side.
+  const busyIntervals = busySlots.map(b => ({
+    start: new Date(b.start),
+    end: new Date(b.end)
+  }));
 
-        const [startHour, startMinute] = rule.startTime.split(':').map(Number);
-        const [endHour, endMinute] = rule.endTime.split(':').map(Number);
+  const results = [];
+  const now = new Date();
+  const gridMinutes = 15;
 
-        const dayStart = new Date(Date.UTC(currentDay.getUTCFullYear(), currentDay.getUTCMonth(), currentDay.getUTCDate(), startHour, startMinute));
-        const dayEnd = new Date(Date.UTC(currentDay.getUTCFullYear(), currentDay.getUTCMonth(), currentDay.getUTCDate(), endHour, endMinute));
-        
-        const dailyBusySlots = busySlots.filter(slot => 
-            slot.start.getUTCDate() === currentDay.getUTCDate() &&
-            slot.start.getUTCMonth() === currentDay.getUTCMonth() &&
-            slot.start.getUTCFullYear() === currentDay.getUTCFullYear()
-        );
+  for (let d = 1; d <= daysAhead; d++) {
+    const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + d));
+    const rule = availability.find(r => r.dayOfWeek === day.getUTCDay());
+    if (!rule) continue; // no availability rule for this weekday
 
-        let potentialStartTime = new Date(dayStart);
+    // Build dayStart/dayEnd in UTC, then adjust by timezone offset.
+    const [sH, sM] = rule.startTime.split(':').map(Number);
+    const [eH, eM] = rule.endTime.split(':').map(Number);
+    const localStart = new Date(`${day.toISOString().split('T')[0]}T${rule.startTime}:00`);
+    const localEnd   = new Date(`${day.toISOString().split('T')[0]}T${rule.endTime}:00`);
+    // Convert to UTC preserving wall clock in given timezone
+    const tzOffsetMs = localStart.getTimezoneOffset() * 60000;
+    const dayStart = new Date(localStart.getTime() + tzOffsetMs);
+    const dayEnd   = new Date(localEnd.getTime() + tzOffsetMs);
 
-        while (potentialStartTime < dayEnd) {
-            const prevAppointment = dailyBusySlots
-                .filter(slot => slot.end <= potentialStartTime)
-                .sort((a, b) => b.end - a.end)[0];
+    let potentialStart = new Date(dayStart);
 
-            const origin = prevAppointment?.location || startAddress;
-            const travelToSeconds = await getTravelTime(origin, destinationAddress);
+    while (isBefore(addMinutes(potentialStart, duration), dayEnd)) {
+      // Travel calculations
+      const travelStartSec = includeTravelStart ? await getTravelTime(startAddress, destinationAddress) : 0;
+      const travelEndSec   = includeTravelEnd   ? await getTravelTime(destinationAddress, startAddress) : 0;
+      const totalStart = new Date(potentialStart.getTime() - travelStartSec * 1000);
+      const appointmentEnd = addMinutes(potentialStart, duration);
+      const totalEnd = new Date(appointmentEnd.getTime() + travelEndSec * 1000);
 
-            if (maxTravelTime && (travelToSeconds / 60) > maxTravelTime) {
-                potentialStartTime.setUTCMinutes(potentialStartTime.getUTCMinutes() + 15);
-                continue;
-            }
+      // Check overlap with busy intervals
+      const overlaps = busyIntervals.some(b => areIntervalsOverlapping({ start: totalStart, end: totalEnd }, b));
 
-            const travelToMs = travelToSeconds * 1000;
-            
-            let effectiveStartTime = prevAppointment ? new Date(prevAppointment.end.getTime()) : potentialStartTime;
-            
-            const totalBlockStart = new Date(effectiveStartTime.getTime() + (workdayMode === 'FLEXIBEL' && includeTravelStart && !prevAppointment ? travelToMs : 0));
-            
-            const roundedMinutes = Math.ceil(totalBlockStart.getUTCMinutes() / 15) * 15;
-            totalBlockStart.setUTCMinutes(roundedMinutes, 0, 0);
-
-            if (totalBlockStart < potentialStartTime) {
-                totalBlockStart.setTime(potentialStartTime.getTime());
-            }
-
-            const appointmentStart = new Date(totalBlockStart.getTime() + (workdayMode === 'VAST' || (workdayMode === 'FLEXIBEL' && prevAppointment) ? travelToMs : 0));
-            const appointmentEnd = new Date(appointmentStart.getTime() + appointmentDurationMs);
-            
-            if (appointmentEnd > dayEnd) {
-                break;
-            }
-
-            const nextAppointment = dailyBusySlots.find(slot => slot.start >= appointmentEnd);
-            const travelFromMs = nextAppointment ? await getTravelTime(destinationAddress, nextAppointment.location) * 1000 : 0;
-            
-            const totalBlockEnd = new Date(appointmentEnd.getTime() + bufferMs + (workdayMode === 'FLEXIBEL' && includeTravelEnd ? travelFromMs : 0));
-
-            let isAvailable = true;
-            if (nextAppointment && totalBlockEnd > nextAppointment.start) {
-                isAvailable = false;
-            }
-
-            for (const busy of dailyBusySlots) {
-                if (totalBlockStart < busy.end && totalBlockEnd > busy.start) {
-                    isAvailable = false;
-                    break;
-                }
-            }
-
-            if (isAvailable) {
-                if (!availableSlots.some(s => s.start.getTime() === appointmentStart.getTime())) {
-                    availableSlots.push({
-                        start: appointmentStart,
-                        end: appointmentEnd,
-                    });
-                }
-                // **CRITICAL FIX**: Advance potentialStartTime to the end of the current appointment
-                potentialStartTime = new Date(appointmentEnd.getTime());
-            } else {
-                // If slot is not available, advance by 15 minutes to check the next interval
-                potentialStartTime.setUTCMinutes(potentialStartTime.getUTCMinutes() + 15);
-            }
-        }
+      if (!overlaps) {
+        results.push({
+          start: potentialStart.toLocaleString('nl-NL', { timeZone: timezone }),
+          end: appointmentEnd.toLocaleString('nl-NL', { timeZone: timezone }),
+          start_utc: potentialStart.toISOString()
+        });
+        // Move pointer beyond this blocked period + buffer
+        potentialStart = addMinutes(totalEnd, buffer);
+      } else {
+        // move by grid until we exit overlap
+        potentialStart = addMinutes(potentialStart, gridMinutes);
+      }
     }
-    
-    const userTimeZone = timezone || 'Europe/Amsterdam';
-    return availableSlots.map(slot => ({
-        start: slot.start.toLocaleString('nl-NL', { timeZone: userTimeZone }),
-        end: slot.end.toLocaleString('nl-NL', { timeZone: userTimeZone }),
-        start_utc: slot.start.toISOString(),
-    }));
+  }
+
+  return results;
 }
