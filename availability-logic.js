@@ -105,7 +105,7 @@ export async function calculateAvailability ({
           start_utc: potentialStart.toISOString()
         });
         // Move pointer beyond this blocked period + buffer
-        potentialStart = addMinutes(totalEnd, buffer);
+        potentialStart = addMinutes(appointmentEnd, buffer);
       } else {
         // move by grid until we exit overlap
         potentialStart = addMinutes(potentialStart, gridMinutes);
