@@ -1,1 +1,1 @@
-Fix: Handle invalid_grant error during Google OAuth callback
+Fix: Correctly handle redirect_uri in getToken call

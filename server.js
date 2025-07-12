@@ -73,7 +73,6 @@ app.get('/oauth2callback', async (req, res) => {
   try {
     const { tokens } = await oauth2Client.getToken({
         code,
-        grant_type: 'authorization_code',
         redirect_uri: process.env.GOOGLE_REDIRECT_URI,
     });
     oauth2Client.setCredentials(tokens);
