@@ -9,6 +9,7 @@ import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import { pool, createTables, testConnection } from './db.js';
 import fetch from 'node-fetch';
+import { calculateAvailability } from './availability-logic.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -250,25 +251,6 @@ app.get('/schedule', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'schedule.html'));
 });
 
-// Get travel time from Google Maps API
-async function getTravelTime(origin, destination) {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-  if (!apiKey || !origin || !destination) {
-    return 0;
-  }
-  const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}&key=${apiKey}`;
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
-    if (data.rows[0]?.elements[0]?.status === 'OK') {
-      return data.rows[0].elements[0].duration.value; // Return seconds
-    }
-  } catch (error) {
-    console.error('Error fetching travel time:', error);
-  }
-  return 0;
-}
-
 // Get availability for a given link
 app.get('/get-availability', async (req, res) => {
   const { linkId, destinationAddress } = req.query;
@@ -319,84 +301,21 @@ app.get('/get-availability', async (req, res) => {
             location: e.location 
         }));
 
-    const availableSlots = [];
-    const appointmentDurationMs = parseInt(duration, 10) * 60000;
-    const bufferMs = parseInt(buffer, 10) * 60000;
+    const options = {
+        availabilityRules: availability,
+        busySlots,
+        appointmentDuration: parseInt(duration, 10),
+        buffer: parseInt(buffer, 10) || 0,
+        startAddress,
+        destinationAddress,
+        maxTravelTime: max_travel_time,
+        workdayMode: workday_mode,
+        includeTravelStart: include_travel_start,
+        includeTravelEnd: include_travel_end
+    };
 
-    for (let d = 1; d <= 7; d++) {
-        const currentDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d);
-        const dayOfWeek = currentDay.getDay();
-        const rule = availability.find(r => r.dayOfWeek === dayOfWeek);
-
-        if (rule) {
-            const [startHour, startMinute] = rule.startTime.split(':').map(Number);
-            const [endHour, endMinute] = rule.endTime.split(':').map(Number);
-
-            const dayStart = new Date(currentDay.setHours(startHour, startMinute, 0, 0));
-            const dayEnd = new Date(currentDay.setHours(endHour, endMinute, 0, 0));
-
-            let potentialStartTime = new Date(dayStart);
-
-            while (potentialStartTime < dayEnd) {
-                const prevAppointment = busySlots
-                    .filter(slot => slot.end <= potentialStartTime)
-                    .sort((a, b) => b.end - a.end)[0];
-                
-                const origin = prevAppointment?.location || startAddress;
-                const travelToSeconds = await getTravelTime(origin, destinationAddress);
-                
-                if (max_travel_time && (travelToSeconds / 60) > max_travel_time) {
-                    potentialStartTime.setMinutes(potentialStartTime.getMinutes() + 15);
-                    continue;
-                }
-
-                const travelToMs = travelToSeconds * 1000;
-                
-                let appointmentStart;
-                if (workday_mode === 'FLEXIBEL' && prevAppointment) {
-                    appointmentStart = new Date(prevAppointment.end.getTime() + travelToMs);
-                } else if (workday_mode === 'FLEXIBEL' && include_travel_start) {
-                    appointmentStart = new Date(potentialStartTime.getTime() + travelToMs);
-                } else {
-                    appointmentStart = new Date(potentialStartTime.getTime());
-                }
-
-                const appointmentEnd = new Date(appointmentStart.getTime() + appointmentDurationMs);
-
-                const nextAppointment = busySlots.find(slot => slot.start >= appointmentEnd);
-                const travelFromMs = nextAppointment ? (await getTravelTime(destinationAddress, nextAppointment.location)) * 1000 : 0;
-
-                let totalBlockEnd = new Date(appointmentEnd.getTime() + bufferMs);
-                if (workday_mode === 'FLEXIBEL' && nextAppointment) {
-                    totalBlockEnd = new Date(totalBlockEnd.getTime() + travelFromMs);
-                } else if (workday_mode === 'FLEXIBEL' && include_travel_end) {
-                    totalBlockEnd = new Date(totalBlockEnd.getTime() + (await getTravelTime(destinationAddress, startAddress) * 1000));
-                }
-
-                let isAvailable = true;
-                if (appointmentStart < potentialStartTime || appointmentEnd > dayEnd) {
-                    isAvailable = false;
-                } else if (nextAppointment && totalBlockEnd > nextAppointment.start) {
-                    isAvailable = false;
-                }
-
-                for (const busy of busySlots) {
-                    if (appointmentStart < busy.end && appointmentEnd > busy.start) {
-                        isAvailable = false;
-                        break;
-                    }
-                }
-
-                if (isAvailable) {
-                    availableSlots.push({
-                        start: appointmentStart.toISOString(),
-                        end: appointmentEnd.toISOString(),
-                    });
-                }
-                potentialStartTime.setMinutes(potentialStartTime.getMinutes() + 15);
-            }
-        }
-    }
+    const availableSlots = await calculateAvailability(options);
+    
     res.json({ title, duration, slots: availableSlots });
   } catch (error) {
     console.error('Error getting availability:', error);

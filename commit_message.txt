@@ -1,1 +1,1 @@
-Feat: Implement final intelligent scheduling logic and persistent sessions
+Feat: Implement final intelligent scheduling logic and persistent sessions (for real this time)
