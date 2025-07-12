@@ -44,6 +44,7 @@ const oauth2Client = new google.auth.OAuth2(
 const scopes = [
   'https://www.googleapis.com/auth/calendar.readonly',
   'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/userinfo.email',
 ];
 
 // API endpoint to provide the Google Maps API key to the frontend
@@ -71,12 +72,33 @@ app.get('/oauth2callback', async (req, res) => {
   const { code } = req.query;
   try {
     const { tokens } = await oauth2Client.getToken(code);
-    const userId = uuidv4();
+    oauth2Client.setCredentials(tokens);
 
-    await pool.query(
-      'INSERT INTO users (id, tokens) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET tokens = $2',
-      [userId, tokens]
-    );
+    // Get user's email address
+    const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+    const { data } = await oauth2.userinfo.get();
+    const userEmail = data.email;
+
+    if (!userEmail) {
+        return res.status(500).send('Kon e-mailadres niet ophalen van Google.');
+    }
+
+    // Check if user exists, otherwise create them
+    let userResult = await pool.query('SELECT * FROM users WHERE email = $1', [userEmail]);
+    let userId;
+
+    if (userResult.rows.length > 0) {
+        // User exists, update tokens
+        userId = userResult.rows[0].id;
+        await pool.query('UPDATE users SET tokens = $1 WHERE id = $2', [tokens, userId]);
+    } else {
+        // New user, create them
+        userId = uuidv4();
+        await pool.query(
+            'INSERT INTO users (id, email, tokens) VALUES ($1, $2, $3)',
+            [userId, userEmail, tokens]
+        );
+    }
 
     req.session.userId = userId;
     res.redirect('/dashboard.html');

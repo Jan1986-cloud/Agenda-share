@@ -1,1 +1,1 @@
-Refactor: Remove modal and display form directly on dashboard
+Fix: Implement persistent user accounts based on email
