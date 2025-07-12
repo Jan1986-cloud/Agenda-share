@@ -302,16 +302,9 @@ app.get('/get-availability', async (req, res) => {
         }));
 
     const options = {
-        availabilityRules: link.availability,
+        link, // Pass the whole link object
         busySlots,
-        appointmentDuration: parseInt(link.duration, 10),
-        buffer: parseInt(link.buffer, 10) || 0,
-        startAddress: link.start_address,
         destinationAddress,
-        maxTravelTime: link.max_travel_time,
-        workdayMode: link.workday_mode,
-        includeTravelStart: link.include_travel_start,
-        includeTravelEnd: link.include_travel_end,
         getTravelTime,
     };
 

@@ -114,6 +114,14 @@ export const createTables = async () => {
         console.log('Migrated links table: added include_travel_end column.');
     }
 
+    const timezoneColumn = await client.query(`
+        SELECT column_name FROM information_schema.columns WHERE table_name='links' AND column_name='timezone'
+    `);
+    if (timezoneColumn.rows.length === 0) {
+        await client.query(`ALTER TABLE links ADD COLUMN timezone VARCHAR(255) NOT NULL DEFAULT 'Europe/Amsterdam'`);
+        console.log('Migrated links table: added timezone column.');
+    }
+
     await client.query(`
         CREATE TABLE IF NOT EXISTS appointments (
             id SERIAL PRIMARY KEY,
