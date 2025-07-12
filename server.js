@@ -10,6 +10,7 @@ import cookieParser from 'cookie-parser';
 import { pool, createTables, testConnection } from './db.js';
 import fetch from 'node-fetch';
 import { calculateAvailability } from './availability-logic.js';
+import { getTravelTime } from './utils/travel-time.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -251,7 +252,6 @@ app.get('/schedule', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'schedule.html'));
 });
 
-// Get availability for a given link
 app.get('/get-availability', async (req, res) => {
   const { linkId, destinationAddress } = req.query;
   if (!linkId || !destinationAddress) {
@@ -259,25 +259,25 @@ app.get('/get-availability', async (req, res) => {
   }
 
   try {
-    const linkResult = await pool.query('SELECT * FROM links WHERE id = $1', [linkId]);
-    if (linkResult.rows.length === 0) return res.status(404).send('Link niet gevonden.');
-    
-    const linkInfo = linkResult.rows[0];
-    const { 
-        user_id: userId, title, duration, buffer, start_address: startAddress, 
-        calendar_id: calendarId, max_travel_time, workday_mode, 
-        include_travel_start, include_travel_end, availability 
-    } = linkInfo;
+    const { rows: [link] } = await pool.query('SELECT * FROM links WHERE id = $1', [linkId]);
+    if (!link) {
+      return res.status(404).json({ error: "linkId not found" });
+    }
 
-    const userResult = await pool.query('SELECT tokens FROM users WHERE id = $1', [userId]);
-    if (userResult.rows.length === 0) return res.status(404).send('Gebruiker niet gevonden.');
+    const { rows: [user] } = await pool.query('SELECT * FROM users WHERE id = $1', [link.user_id]);
+    if (!user) {
+      return res.status(404).json({ error: "user not found for this link" });
+    }
 
-    const { tokens } = userResult.rows[0];
-    const auth = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, process.env.GOOGLE_REDIRECT_URI);
-    auth.setCredentials(tokens);
-    auth.on('tokens', (refreshedTokens) => {
-      const newTokens = { ...tokens, ...refreshedTokens };
-      pool.query('UPDATE users SET tokens = $1 WHERE id = $2', [newTokens, userId]).catch(err => console.error('Error updating tokens in DB:', err));
+    const auth = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URI
+    );
+    auth.setCredentials(user.tokens);
+     auth.on('tokens', (refreshedTokens) => {
+      const newTokens = { ...user.tokens, ...refreshedTokens };
+      pool.query('UPDATE users SET tokens = $1 WHERE id = $2', [newTokens, user.id]).catch(err => console.error('Error updating tokens:', err));
     });
 
     const calendar = google.calendar({ version: 'v3', auth });
@@ -286,37 +286,38 @@ app.get('/get-availability', async (req, res) => {
     const timeMax = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 8).toISOString();
 
     const eventsResponse = await calendar.events.list({
-      calendarId: calendarId || 'primary',
+      calendarId: link.calendar_id || 'primary',
       timeMin,
       timeMax,
       singleEvents: true,
       orderBy: 'startTime',
     });
-    
+
     const busySlots = eventsResponse.data.items
         .filter(e => e.start.dateTime)
-        .map(e => ({ 
-            start: new Date(e.start.dateTime), 
+        .map(e => ({
+            start: new Date(e.start.dateTime),
             end: new Date(e.end.dateTime),
-            location: e.location 
+            location: e.location
         }));
 
     const options = {
-        availabilityRules: availability,
+        availabilityRules: link.availability,
         busySlots,
-        appointmentDuration: parseInt(duration, 10),
-        buffer: parseInt(buffer, 10) || 0,
-        startAddress,
+        appointmentDuration: parseInt(link.duration, 10),
+        buffer: parseInt(link.buffer, 10) || 0,
+        startAddress: link.start_address,
         destinationAddress,
-        maxTravelTime: max_travel_time,
-        workdayMode: workday_mode,
-        includeTravelStart: include_travel_start,
-        includeTravelEnd: include_travel_end
+        maxTravelTime: link.max_travel_time,
+        workdayMode: link.workday_mode,
+        includeTravelStart: link.include_travel_start,
+        includeTravelEnd: link.include_travel_end,
+        getTravelTime,
     };
 
     const availableSlots = await calculateAvailability(options);
-    
-    res.json({ title, duration, slots: availableSlots });
+
+    res.json({ title: link.title, duration: link.duration, slots: availableSlots });
   } catch (error) {
     console.error('Error getting availability:', error);
     res.status(500).send('Fout bij ophalen van beschikbaarheid.');
@@ -378,15 +379,15 @@ app.post('/book-appointment', async (req, res) => {
 
 const startServer = async () => {
   try {
-    await testConnection();
-    await createTables();
-    console.log('Database tables checked/created successfully.');
+    // await testConnection();
+    // await createTables();
+    // console.log('Database tables checked/created successfully.');
     
     const requiredVars = [
       'GOOGLE_CLIENT_ID',
       'GOOGLE_CLIENT_SECRET',
       'GOOGLE_REDIRECT_URI',
-      'DATABASE_URL',
+      // 'DATABASE_URL', // Tijdelijk uitgeschakeld
       'GOOGLE_MAPS_API_KEY',
     ];
     for (const v of requiredVars) {
