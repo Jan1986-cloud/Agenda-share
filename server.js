@@ -157,15 +157,15 @@ app.get('/api/calendars', async (req, res) => {
 // POST a new link
 app.post('/api/links', async (req, res) => {
   if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
-  const { title, duration, buffer, availability, startAddress, calendarId } = req.body;
+  const { title, duration, buffer, availability, startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd } = req.body;
   if (!title || !duration || !availability || !Array.isArray(availability) || !startAddress || !calendarId) {
     return res.status(400).send('Ongeldige invoer.');
   }
   try {
     const linkId = uuidv4();
     await pool.query(
-      'INSERT INTO links (id, user_id, title, duration, buffer, availability, start_address, calendar_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-      [linkId, req.session.userId, title, parseInt(duration, 10), parseInt(buffer, 10) || 0, JSON.stringify(availability), startAddress, calendarId]
+      'INSERT INTO links (id, user_id, title, duration, buffer, availability, start_address, calendar_id, max_travel_time, workday_mode, include_travel_start, include_travel_end) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)',
+      [linkId, req.session.userId, title, parseInt(duration, 10), parseInt(buffer, 10) || 0, JSON.stringify(availability), startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd]
     );
     res.status(201).json({ linkId });
   } catch (error) {
@@ -178,14 +178,14 @@ app.post('/api/links', async (req, res) => {
 app.put('/api/links/:id', async (req, res) => {
     if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
     const { id } = req.params;
-    const { title, duration, buffer, availability, startAddress, calendarId } = req.body;
+    const { title, duration, buffer, availability, startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd } = req.body;
     if (!title || !duration || !availability || !Array.isArray(availability) || !startAddress || !calendarId) {
         return res.status(400).send('Ongeldige invoer.');
     }
     try {
         const { rowCount } = await pool.query(
-            'UPDATE links SET title = $1, duration = $2, buffer = $3, availability = $4, start_address = $5, calendar_id = $6 WHERE id = $7 AND user_id = $8',
-            [title, parseInt(duration, 10), parseInt(buffer, 10) || 0, JSON.stringify(availability), startAddress, calendarId, id, req.session.userId]
+            'UPDATE links SET title = $1, duration = $2, buffer = $3, availability = $4, start_address = $5, calendar_id = $6, max_travel_time = $7, workday_mode = $8, include_travel_start = $9, include_travel_end = $10 WHERE id = $11 AND user_id = $12',
+            [title, parseInt(duration, 10), parseInt(buffer, 10) || 0, JSON.stringify(availability), startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd, id, req.session.userId]
         );
         if (rowCount === 0) {
             return res.status(404).send('Link niet gevonden of geen toestemming.');
@@ -253,21 +253,20 @@ app.get('/schedule', (req, res) => {
 // Get travel time from Google Maps API
 async function getTravelTime(origin, destination) {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-  if (!apiKey) {
-    console.error('GOOGLE_MAPS_API_KEY is not set.');
-    return 0; // Return 0 if API key is missing
+  if (!apiKey || !origin || !destination) {
+    return 0;
   }
   const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(destination)}&key=${apiKey}`;
   try {
     const response = await fetch(url);
     const data = await response.json();
-    if (data.rows[0].elements[0].status === 'OK') {
-      return data.rows[0].elements[0].duration.value; // afronden op hele minuten
+    if (data.rows[0]?.elements[0]?.status === 'OK') {
+      return data.rows[0].elements[0].duration.value; // Return seconds
     }
   } catch (error) {
     console.error('Error fetching travel time:', error);
   }
-  return 0; // Return 0 on error
+  return 0;
 }
 
 // Get availability for a given link
@@ -282,7 +281,8 @@ app.get('/get-availability', async (req, res) => {
     if (linkResult.rows.length === 0) return res.status(404).send('Link niet gevonden.');
     
     const linkInfo = linkResult.rows[0];
-    const { user_id: userId, title, duration, buffer, availability, start_address: startAddress, calendar_id: calendarId } = linkInfo;
+    const { user_id: userId, title, duration, buffer, start_address: startAddress, calendar_id: calendarId, max_travel_time, workday_mode, include_travel_start, include_travel_end } = linkInfo;
+    const availability = JSON.parse(linkInfo.availability);
 
     const userResult = await pool.query('SELECT tokens FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) return res.status(404).send('Gebruiker niet gevonden.');
@@ -290,7 +290,6 @@ app.get('/get-availability', async (req, res) => {
     const { tokens } = userResult.rows[0];
     const auth = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, process.env.GOOGLE_REDIRECT_URI);
     auth.setCredentials(tokens);
-    // Token refresh logic
     auth.on('tokens', (refreshedTokens) => {
       const newTokens = { ...tokens, ...refreshedTokens };
       pool.query('UPDATE users SET tokens = $1 WHERE id = $2', [newTokens, userId]).catch(err => console.error('Error updating tokens in DB:', err));
@@ -308,54 +307,81 @@ app.get('/get-availability', async (req, res) => {
       singleEvents: true,
       orderBy: 'startTime',
     });
-    const busySlots = eventsResponse.data.items.map(e => ({ start: new Date(e.start.dateTime), end: new Date(e.end.dateTime) }));
+    
+    const busySlots = eventsResponse.data.items
+        .filter(e => e.start.dateTime) // Filter out all-day events
+        .map(e => ({ 
+            start: new Date(e.start.dateTime), 
+            end: new Date(e.end.dateTime),
+            location: e.location 
+        }));
 
     const availableSlots = [];
     const appointmentDurationMs = parseInt(duration, 10) * 60000;
     const bufferMs = parseInt(buffer, 10) * 60000;
 
-    const travelTimeSeconds = await getTravelTime(startAddress, destinationAddress);
-    const travelTimeMs = Math.ceil(travelTimeSeconds / 60) * 60000;
-
     for (let d = 1; d <= 7; d++) {
-      const currentDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d);
-      const dayOfWeek = currentDay.getDay();
-      const rule = availability.find(r => r.dayOfWeek === dayOfWeek);
+        const currentDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d);
+        const dayOfWeek = currentDay.getDay();
+        const rule = availability.find(r => r.dayOfWeek === dayOfWeek);
 
-      if (rule) {
-        const [startHour, startMinute] = rule.startTime.split(':').map(Number);
-        const [endHour, endMinute] = rule.endTime.split(':').map(Number);
+        if (rule) {
+            const [startHour, startMinute] = rule.startTime.split(':').map(Number);
+            const [endHour, endMinute] = rule.endTime.split(':').map(Number);
 
-        let potentialStartTime = new Date(currentDay);
-        potentialStartTime.setHours(startHour, startMinute, 0, 0);
+            const dayStart = new Date(currentDay.setHours(startHour, startMinute, 0, 0));
+            const dayEnd = new Date(currentDay.setHours(endHour, endMinute, 0, 0));
 
-        const dayEnd = new Date(currentDay);
-        dayEnd.setHours(endHour, endMinute, 0, 0);
+            let potentialStartTime = new Date(dayStart);
 
-        while (potentialStartTime < dayEnd) {
-          const appointmentStartTime = new Date(potentialStartTime.getTime() + travelTimeMs);
-          const appointmentEndTime = new Date(appointmentStartTime.getTime() + appointmentDurationMs);
-          const totalBlockEndTime = new Date(appointmentEndTime.getTime() + bufferMs);
+            while (potentialStartTime < dayEnd) {
+                const prevAppointment = busySlots
+                    .filter(slot => slot.end <= potentialStartTime)
+                    .sort((a, b) => b.end - a.end)[0];
+                
+                const origin = prevAppointment?.location || startAddress;
+                const travelToSeconds = await getTravelTime(origin, destinationAddress);
+                
+                if (max_travel_time && (travelToSeconds / 60) > max_travel_time) {
+                    potentialStartTime.setMinutes(potentialStartTime.getMinutes() + 15);
+                    continue;
+                }
 
-          if (totalBlockEndTime > dayEnd) break;
+                const travelToMs = travelToSeconds * 1000;
+                
+                let appointmentStart = new Date(potentialStartTime.getTime());
+                if (workday_mode === 'FLEXIBEL' && prevAppointment) {
+                    appointmentStart = new Date(prevAppointment.end.getTime() + travelToMs);
+                } else if (workday_mode === 'FLEXIBEL' && include_travel_start) {
+                    appointmentStart = new Date(potentialStartTime.getTime() + travelToMs);
+                }
 
-          let isAvailable = true;
-          for (const busy of busySlots) {
-            if (appointmentStartTime < busy.end && totalBlockEndTime > busy.start) {
-              isAvailable = false;
-              break;
+                const appointmentEnd = new Date(appointmentStart.getTime() + appointmentDurationMs);
+
+                const nextAppointment = busySlots.find(slot => slot.start >= appointmentEnd);
+                const travelFromMs = nextAppointment ? (await getTravelTime(destinationAddress, nextAppointment.location)) * 1000 : 0;
+
+                let totalBlockEnd = new Date(appointmentEnd.getTime() + bufferMs);
+                if (workday_mode === 'FLEXIBEL' && nextAppointment) {
+                    totalBlockEnd = new Date(totalBlockEnd.getTime() + travelFromMs);
+                } else if (workday_mode === 'FLEXIBEL' && include_travel_end) {
+                    totalBlockEnd = new Date(totalBlockEnd.getTime() + (await getTravelTime(destinationAddress, startAddress) * 1000));
+                }
+
+                let isAvailable = true;
+                if (appointmentStart < dayStart || totalBlockEnd > dayEnd) {
+                    isAvailable = false;
+                }
+
+                if (isAvailable) {
+                    availableSlots.push({
+                        start: appointmentStart.toISOString(),
+                        end: appointmentEnd.toISOString(),
+                    });
+                }
+                potentialStartTime.setMinutes(potentialStartTime.getMinutes() + 15);
             }
-          }
-
-          if (isAvailable) {
-            availableSlots.push({
-              start: appointmentStartTime.toISOString(),
-              end: appointmentEndTime.toISOString(),
-            });
-          }
-          potentialStartTime.setMinutes(potentialStartTime.getMinutes() + 15);
         }
-      }
     }
     res.json({ title, duration, slots: availableSlots });
   } catch (error) {
@@ -409,20 +435,6 @@ app.post('/book-appointment', async (req, res) => {
       reminders: { useDefault: false, overrides: [{ method: 'email', minutes: 24 * 60 }, { method: 'popup', minutes: 10 }] },
     };
     await calendar.events.insert({ calendarId: calendarId || 'primary', resource: mainEvent, sendNotifications: true });
-
-    // Create travel time event
-    const travelTimeSeconds = await getTravelTime(startAddress, destinationAddress);
-    if (travelTimeSeconds > 0) {
-      const travelTimeMs = travelTimeSeconds * 1000;
-      const travelStart = new Date(appointmentStart.getTime() - travelTimeMs);
-      const travelEvent = {
-        summary: `Reistijd naar: ${title}`,
-        start: { dateTime: travelStart.toISOString(), timeZone: 'Europe/Amsterdam' },
-        end: { dateTime: appointmentStart.toISOString(), timeZone: 'Europe/Amsterdam' },
-        transparency: 'opaque', // Marks user as busy
-      };
-      await calendar.events.insert({ calendarId: calendarId || 'primary', resource: travelEvent });
-    }
 
     res.status(200).send('Afspraak succesvol ingepland.');
   } catch (error) {

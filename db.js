@@ -81,6 +81,39 @@ export const createTables = async () => {
         console.log('Migrated links table: added calendar_id column.');
     }
 
+    // Migration: Add advanced scheduling options
+    const maxTravelTimeColumn = await client.query(`
+        SELECT column_name FROM information_schema.columns WHERE table_name='links' AND column_name='max_travel_time'
+    `);
+    if (maxTravelTimeColumn.rows.length === 0) {
+        await client.query(`ALTER TABLE links ADD COLUMN max_travel_time INTEGER`);
+        console.log('Migrated links table: added max_travel_time column.');
+    }
+
+    const workdayModeColumn = await client.query(`
+        SELECT column_name FROM information_schema.columns WHERE table_name='links' AND column_name='workday_mode'
+    `);
+    if (workdayModeColumn.rows.length === 0) {
+        await client.query(`ALTER TABLE links ADD COLUMN workday_mode VARCHAR(20) NOT NULL DEFAULT 'VAST'`);
+        console.log('Migrated links table: added workday_mode column.');
+    }
+
+    const includeTravelStartColumn = await client.query(`
+        SELECT column_name FROM information_schema.columns WHERE table_name='links' AND column_name='include_travel_start'
+    `);
+    if (includeTravelStartColumn.rows.length === 0) {
+        await client.query(`ALTER TABLE links ADD COLUMN include_travel_start BOOLEAN NOT NULL DEFAULT true`);
+        console.log('Migrated links table: added include_travel_start column.');
+    }
+
+    const includeTravelEndColumn = await client.query(`
+        SELECT column_name FROM information_schema.columns WHERE table_name='links' AND column_name='include_travel_end'
+    `);
+    if (includeTravelEndColumn.rows.length === 0) {
+        await client.query(`ALTER TABLE links ADD COLUMN include_travel_end BOOLEAN NOT NULL DEFAULT true`);
+        console.log('Migrated links table: added include_travel_end column.');
+    }
+
     await client.query(`
         CREATE TABLE IF NOT EXISTS appointments (
             id SERIAL PRIMARY KEY,

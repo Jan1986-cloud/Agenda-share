@@ -1,1 +1,1 @@
-Fix: Remove redundant JSON.parse causing crash in availability
+Feat: Implement advanced scheduling logic and persistent cookies

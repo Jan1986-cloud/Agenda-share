@@ -46,6 +46,39 @@
                         <select id="calendarId" class="form-select"></select>
                     </div>
                     <hr class="my-4" />
+                    <h6 class="mb-3">Planning Instellingen</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="maxTravelTime" class="form-label">Maximale reistijd (minuten)</label>
+                            <input type="number" class="form-control" id="maxTravelTime" placeholder="Leeg voor geen limiet" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Werkdag modus</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="workdayMode" id="workday-fixed" value="VAST" checked>
+                                <label class="form-check-label" for="workday-fixed">Vaste kantooruren</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="workdayMode" id="workday-flexible" value="FLEXIBEL">
+                                <label class="form-check-label" for="workday-flexible">Flexibel (o.b.v. afspraken)</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="flexible-options" class="row mt-3" style="display: none;">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="includeTravelStart" checked>
+                                <label class="form-check-label" for="includeTravelStart">Reistijd naar 1e afspraak meerekenen</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="includeTravelEnd" checked>
+                                <label class="form-check-label" for="includeTravelEnd">Reistijd vanaf laatste afspraak meerekenen</label>
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="my-4" />
                     <h6 class="mb-3">Wekelijkse beschikbaarheid</h6>
                     <div id="availability-schedule"></div>
                     <div class="d-flex justify-content-end align-items-center mt-4">
@@ -97,6 +130,8 @@
             document.getElementById('link-form').reset();
             document.getElementById('linkId').value = '';
             document.getElementById('clear-form-btn').style.display = 'none';
+            document.getElementById('workday-fixed').checked = true;
+            document.getElementById('flexible-options').style.display = 'none';
             renderAvailabilitySchedule();
         }
 
@@ -175,6 +210,10 @@
                 startAddress: document.getElementById('startAddress').value,
                 availability,
                 calendarId: document.getElementById('calendarId').value,
+                maxTravelTime: document.getElementById('maxTravelTime').value || null,
+                workdayMode: document.querySelector('input[name="workdayMode"]:checked').value,
+                includeTravelStart: document.getElementById('includeTravelStart').checked,
+                includeTravelEnd: document.getElementById('includeTravelEnd').checked,
             };
 
             const url = linkId ? `/api/links/${linkId}` : '/api/links';
@@ -230,6 +269,17 @@
                 document.getElementById('buffer').value = link.buffer;
                 document.getElementById('startAddress').value = link.start_address;
                 document.getElementById('calendarId').value = link.calendar_id || 'primary';
+                document.getElementById('maxTravelTime').value = link.max_travel_time;
+                document.getElementById(`workday-${link.workday_mode?.toLowerCase() || 'fixed'}`).checked = true;
+                document.getElementById('includeTravelStart').checked = link.include_travel_start;
+                document.getElementById('includeTravelEnd').checked = link.include_travel_end;
+
+                if (document.getElementById('workday-flexible').checked) {
+                    document.getElementById('flexible-options').style.display = 'flex';
+                } else {
+                    document.getElementById('flexible-options').style.display = 'none';
+                }
+
                 renderAvailabilitySchedule(link.availability);
                 
                 document.getElementById('clear-form-btn').style.display = 'inline-block';
@@ -251,6 +301,12 @@
         });
 
         document.getElementById('clear-form-btn').addEventListener('click', resetForm);
+
+        document.querySelectorAll('input[name="workdayMode"]').forEach(elem => {
+            elem.addEventListener('change', function(event) {
+                document.getElementById('flexible-options').style.display = event.target.value === 'FLEXIBEL' ? 'flex' : 'none';
+            });
+        });
 
         function initAutocomplete() {
             const addressInput = document.getElementById('startAddress');
