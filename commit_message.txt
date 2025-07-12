@@ -1,1 +1,1 @@
-Fix: Implement persistent user accounts based on email
+Fix: Add database migration for users.email column to prevent crash

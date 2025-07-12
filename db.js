@@ -27,12 +27,22 @@ export const createTables = async () => {
     await client.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id VARCHAR(255) PRIMARY KEY,
-                email VARCHAR(255) UNIQUE NOT NULL,
                 tokens JSONB NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT NOW()
             );
         `);
 
+    // Migration: Add email column to users table if it doesn't exist
+    const userColumns = await client.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name='users' AND column_name='email'
+    `);
+    if (userColumns.rows.length === 0) {
+        await client.query('ALTER TABLE users ADD COLUMN email VARCHAR(255) UNIQUE');
+        console.log('Migrated users table: added email column.');
+    }
+    
     await client.query(`
             CREATE TABLE IF NOT EXISTS links (
                 id VARCHAR(255) PRIMARY KEY,
