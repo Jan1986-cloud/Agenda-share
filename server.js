@@ -259,64 +259,56 @@ app.get('/get-availability', async (req, res) => {
   }
 
   try {
-    const { rows: [link] } = await pool.query('SELECT * FROM links WHERE id = $1', [linkId]);
-    if (!link) {
-      return res.status(404).json({ error: "linkId not found" });
-    }
+    const { rows: [link] } =
+      await pool.query('SELECT * FROM links WHERE id = $1', [linkId]);
+    if (!link) return res.status(404).json({ error: 'linkId not found' });
 
-    const { rows: [user] } = await pool.query('SELECT * FROM users WHERE id = $1', [link.user_id]);
-    if (!user) {
-      return res.status(404).json({ error: "user not found for this link" });
-    }
+    const { rows: [user] } =
+      await pool.query('SELECT * FROM users WHERE id = $1', [link.user_id]);
+    if (!user) return res.status(404).json({ error: 'user not found' });
 
+    // ── Google auth
     const auth = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
       process.env.GOOGLE_REDIRECT_URI
     );
     auth.setCredentials(user.tokens);
-     auth.on('tokens', (refreshedTokens) => {
-      const newTokens = { ...user.tokens, ...refreshedTokens };
-      pool.query('UPDATE users SET tokens = $1 WHERE id = $2', [newTokens, user.id]).catch(err => console.error('Error updating tokens:', err));
-    });
-
+    auth.on('tokens', t =>
+      pool.query('UPDATE users SET tokens=$1 WHERE id=$2',
+        [{ ...user.tokens, ...t }, user.id]).catch(console.error)
+    );
     const calendar = google.calendar({ version: 'v3', auth });
-    const now = new Date();
-    const timeMin = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
-    const timeMax = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 8).toISOString();
 
-    const eventsResponse = await calendar.events.list({
-      calendarId: link.calendar_id || 'primary',
-      timeMin,
-      timeMax,
-      singleEvents: true,
-      orderBy: 'startTime',
-    });
+    // ── Busy events ophalen, maar vangen bij token-fout
+    let busySlots = [];
+    try {
+      const now  = new Date();
+      const resp = await calendar.events.list({
+        calendarId : link.calendar_id || 'primary',
+        timeMin    : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString(),
+        timeMax    : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 8).toISOString(),
+        singleEvents: true,
+        orderBy     : 'startTime',
+      });
+      busySlots = (resp.data.items || [])
+        .filter(e => e.start?.dateTime)
+        .map(e => ({ start: new Date(e.start.dateTime),
+                     end  : new Date(e.end .dateTime) }));
+    } catch (err) {
+      console.warn('Calendar fetch failed → busySlots=[]', err.message);
+    }
 
-    const busySlots = eventsResponse.data.items
-        .filter(e => e.start.dateTime)
-        .map(e => ({
-            start: new Date(e.start.dateTime),
-            end: new Date(e.end.dateTime),
-            location: e.location
-        }));
-
-    const options = {
-        link, // Pass the whole link object
-        busySlots,
-        destinationAddress,
-        getTravelTime,
-    };
-
-    const availableSlots = await calculateAvailability(options);
-
-    res.json({ title: link.title, duration: link.duration, slots: availableSlots });
-  } catch (error) {
-    console.error('Error getting availability:', error);
+    // ── Beschikbaarheid berekenen
+    const opts = { link, busySlots, destinationAddress, getTravelTime };
+    const slots = await calculateAvailability(opts);
+    console.log('SLOT sample', slots[0]);          // debug in Railway-logs
+    res.json({ title: link.title, duration: link.duration, slots });
+  } catch (err) {
+    console.error('Error get-availability', err);
     res.status(500).send('Fout bij ophalen van beschikbaarheid.');
   }
 });
-
 // Book an appointment
 app.post('/book-appointment', async (req, res) => {
   const { linkId, startTime, name, email, destinationAddress, phone } = req.body;
