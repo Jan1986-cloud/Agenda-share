@@ -1,1 +1,1 @@
-Fix: Final attempt to fix availability logic and session persistence
+Fix: Remove redundant JSON.parse causing crash in availability
