@@ -1,1 +1,1 @@
-Fix: Correctly parse availability to prevent server crash
+Fix: Correctly parse availability to prevent server crash (final)
