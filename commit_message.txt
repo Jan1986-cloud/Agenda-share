@@ -1,1 +1,1 @@
-Feat: Implement advanced scheduling logic and persistent cookies
+Feat: Implement advanced, intelligent scheduling logic and persistent sessions

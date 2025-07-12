@@ -310,8 +310,8 @@ app.get('/get-availability', async (req, res) => {
     
     const busySlots = eventsResponse.data.items
         .filter(e => e.start.dateTime) // Filter out all-day events
-        .map(e => ({ 
-            start: new Date(e.start.dateTime), 
+        .map(e => ({
+            start: new Date(e.start.dateTime),
             end: new Date(e.end.dateTime),
             location: e.location 
         }));
