@@ -1,5 +1,5 @@
 // test/availability-timezone.test.js
-import { calculateAvailability } from '../availability-logic.js';
+import { calculateAvailability } from '../utils/availability-logic.js';
 
 // Mock de reistijd functie voor voorspelbare tests
 // Retourneert reistijd in seconden
