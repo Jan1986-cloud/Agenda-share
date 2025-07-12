@@ -9,7 +9,7 @@ import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import { pool, createTables, testConnection } from './db.js';
 import fetch from 'node-fetch';
-import { calculateAvailability } from './availability-logic.js';
+import { calculateAvailability } from './utils/availability-logic.js';
 import { getTravelTime } from './utils/travel-time.js';
 
 const __filename = fileURLToPath(import.meta.url);

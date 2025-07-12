@@ -8,7 +8,6 @@ test('exact twee bestanden en wrapper is root', () => {
       .sort();              // ➜ consequent pad-scheiding
 
   expect(hits).toEqual([
-    'availability-logic.js',       // de wrapper
-    'utils/availability-logic.js'  // de echte implementatie
+    'utils/availability-logic.js'
   ]);
 });
