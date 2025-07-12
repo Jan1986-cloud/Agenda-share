@@ -281,7 +281,7 @@ app.get('/get-availability', async (req, res) => {
     if (linkResult.rows.length === 0) return res.status(404).send('Link niet gevonden.');
     
     const linkInfo = linkResult.rows[0];
-    const { user_id: userId, title, duration, buffer, availability, start_address: startAddress, calendar_id: calendarId, max_travel_time, workday_mode, include_travel_start, include_travel_end } = linkInfo;
+    const { user_id: userId, title, duration, buffer, start_address: startAddress, calendar_id: calendarId, max_travel_time, workday_mode, include_travel_start, include_travel_end, availability } = linkInfo;
 
     const userResult = await pool.query('SELECT tokens FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) return res.status(404).send('Gebruiker niet gevonden.');
@@ -309,8 +309,8 @@ app.get('/get-availability', async (req, res) => {
     
     const busySlots = eventsResponse.data.items
         .filter(e => e.start.dateTime) // Filter out all-day events
-        .map(e => ({
-            start: new Date(e.start.dateTime),
+        .map(e => ({ 
+            start: new Date(e.start.dateTime), 
             end: new Date(e.end.dateTime),
             location: e.location 
         }));
