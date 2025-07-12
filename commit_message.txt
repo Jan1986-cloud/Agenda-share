@@ -1,1 +1,1 @@
-Fix: Correctly handle redirect_uri in getToken call
+Fix: Restore availability parsing in get-availability API
