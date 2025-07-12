@@ -71,7 +71,11 @@ app.get('/auth', (req, res) => {
 app.get('/oauth2callback', async (req, res) => {
   const { code } = req.query;
   try {
-    const { tokens } = await oauth2Client.getToken(code);
+    const { tokens } = await oauth2Client.getToken({
+        code,
+        grant_type: 'authorization_code',
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+    });
     oauth2Client.setCredentials(tokens);
 
     // Get user's email address

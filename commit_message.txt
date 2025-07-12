@@ -1,1 +1,1 @@
-Fix: Add database migration for users.email column to prevent crash
+Fix: Handle invalid_grant error during Google OAuth callback
