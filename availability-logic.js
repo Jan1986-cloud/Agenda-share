@@ -7,7 +7,7 @@
  */
 export async function calculateAvailability(options) {
     const {
-        link, // Pass the entire link object
+        link,
         busySlots,
         destinationAddress,
         getTravelTime,
@@ -22,7 +22,7 @@ export async function calculateAvailability(options) {
         workday_mode: workdayMode,
         include_travel_start: includeTravelStart,
         include_travel_end: includeTravelEnd,
-        timezone, // Destructure timezone
+        timezone,
     } = link;
 
     const availableSlots = [];
@@ -66,38 +66,28 @@ export async function calculateAvailability(options) {
 
             const travelToMs = travelToSeconds * 1000;
             
-            let appointmentStart;
-            if (prevAppointment) {
-                appointmentStart = new Date(prevAppointment.end.getTime() + travelToMs);
-            } else {
-                appointmentStart = new Date(potentialStartTime.getTime() + (workdayMode === 'FLEXIBEL' && includeTravelStart ? travelToMs : 0));
-            }
+            let effectiveStartTime = prevAppointment ? new Date(prevAppointment.end.getTime()) : potentialStartTime;
             
-            const roundedMinutes = Math.ceil(appointmentStart.getUTCMinutes() / 15) * 15;
-            appointmentStart.setUTCMinutes(roundedMinutes, 0, 0);
+            const totalBlockStart = new Date(effectiveStartTime.getTime() + (workdayMode === 'FLEXIBEL' && includeTravelStart && !prevAppointment ? travelToMs : 0));
+            
+            const roundedMinutes = Math.ceil(totalBlockStart.getUTCMinutes() / 15) * 15;
+            totalBlockStart.setUTCMinutes(roundedMinutes, 0, 0);
 
-            if (appointmentStart < potentialStartTime) {
-                 potentialStartTime.setUTCMinutes(potentialStartTime.getUTCMinutes() + 15);
-                 continue;
+            if (totalBlockStart < potentialStartTime) {
+                totalBlockStart.setTime(potentialStartTime.getTime());
             }
 
+            const appointmentStart = new Date(totalBlockStart.getTime() + (workdayMode === 'VAST' || (workdayMode === 'FLEXIBEL' && prevAppointment) ? travelToMs : 0));
             const appointmentEnd = new Date(appointmentStart.getTime() + appointmentDurationMs);
-
+            
             if (appointmentEnd > dayEnd) {
-                break; 
+                break;
             }
 
             const nextAppointment = dailyBusySlots.find(slot => slot.start >= appointmentEnd);
             const travelFromMs = nextAppointment ? await getTravelTime(destinationAddress, nextAppointment.location) * 1000 : 0;
-
-            let totalBlockEnd = new Date(appointmentEnd.getTime() + bufferMs);
-            if (workdayMode === 'FLEXIBEL') {
-                if (nextAppointment) {
-                    totalBlockEnd = new Date(totalBlockEnd.getTime() + travelFromMs);
-                } else if (includeTravelEnd) {
-                    totalBlockEnd = new Date(totalBlockEnd.getTime() + (await getTravelTime(destinationAddress, startAddress) * 1000));
-                }
-            }
+            
+            const totalBlockEnd = new Date(appointmentEnd.getTime() + bufferMs + (workdayMode === 'FLEXIBEL' && includeTravelEnd ? travelFromMs : 0));
 
             let isAvailable = true;
             if (nextAppointment && totalBlockEnd > nextAppointment.start) {
@@ -105,7 +95,7 @@ export async function calculateAvailability(options) {
             }
 
             for (const busy of dailyBusySlots) {
-                if (appointmentStart < busy.end && appointmentEnd > busy.start) {
+                if (totalBlockStart < busy.end && totalBlockEnd > busy.start) {
                     isAvailable = false;
                     break;
                 }
@@ -114,22 +104,23 @@ export async function calculateAvailability(options) {
             if (isAvailable) {
                 if (!availableSlots.some(s => s.start.getTime() === appointmentStart.getTime())) {
                     availableSlots.push({
-                        start: appointmentStart, // Keep as Date object for now
+                        start: appointmentStart,
                         end: appointmentEnd,
                     });
                 }
+                // **CRITICAL FIX**: Advance potentialStartTime to the end of the current appointment
+                potentialStartTime = new Date(appointmentEnd.getTime());
+            } else {
+                // If slot is not available, advance by 15 minutes to check the next interval
+                potentialStartTime.setUTCMinutes(potentialStartTime.getUTCMinutes() + 15);
             }
-            
-            potentialStartTime = new Date(appointmentStart.getTime());
-            potentialStartTime.setUTCMinutes(potentialStartTime.getUTCMinutes() + 15);
         }
     }
     
-    // Convert final slots to the user's timezone string before returning
     const userTimeZone = timezone || 'Europe/Amsterdam';
     return availableSlots.map(slot => ({
         start: slot.start.toLocaleString('nl-NL', { timeZone: userTimeZone }),
         end: slot.end.toLocaleString('nl-NL', { timeZone: userTimeZone }),
-        start_utc: slot.start.toISOString(), // Also include ISO string for booking
+        start_utc: slot.start.toISOString(),
     }));
 }
