@@ -1,1 +1,1 @@
-Fix: Restore availability parsing in get-availability API
+Fix: Correctly parse availability to prevent server crash
