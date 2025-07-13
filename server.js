@@ -301,9 +301,8 @@ app.get('/get-availability', async (req, res) => {
         orderBy     : 'startTime',
       });
       busySlots = (resp.data.items || [])
-        .filter(e => e.start?.dateTime)
-        .map(e => ({ start: new Date(e.start.dateTime),
-                     end  : new Date(e.end .dateTime) }));
+        .filter(e => e.start?.dateTime && e.transparency !== 'transparent' && e.status === 'confirmed')
+        .map(e => ({ start: new Date(e.start.dateTime), end: new Date(e.end.dateTime) }));
     } catch (err) {
       console.warn('Calendar fetch failed → busySlots=[]', err.message);
     }
