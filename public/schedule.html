@@ -156,67 +156,31 @@
         switchView('error-view');
       }
 
-      function processSlots(rawSlots, durationMinutes) {
+      /**
+       * Groepeer rawSlots per dag zonder herberekening.
+       * @param {{start: string}[]} rawSlots
+       * @returns {Map<string,string[]>} Map met key 'YYYY-MM-DD' en value array ['HH:MM',...]
+       */
+      function groupSlotsByDay(rawSlots) {
           const slotsByDay = new Map();
           rawSlots.forEach(slot => {
-              const startDate = new Date(slot.start_utc);
-              const dayString = startDate.toISOString().split('T')[0];
-              if (!slotsByDay.has(dayString)) {
-                  slotsByDay.set(dayString, []);
+              const dt = new Date(slot.start);
+              const dayKey = dt.toISOString().split('T')[0];
+              const hh = String(dt.getUTCHours()).padStart(2, '0');
+              const mm = String(dt.getUTCMinutes()).padStart(2, '0');
+              const timeKey = `${hh}:${mm}`;
+              if (!slotsByDay.has(dayKey)) {
+                  slotsByDay.set(dayKey, []);
               }
-              slotsByDay.get(dayString).push({ start: startDate, end: new Date(slot.end) });
+              slotsByDay.get(dayKey).push(timeKey);
           });
-
-          const processedSlots = new Map();
-          for (const [dayString, daySlots] of slotsByDay.entries()) {
-              const thirtyMinSlots = new Set();
-              // Find the absolute start and end for the entire day's availability
-              const dayStart = new Date(Math.min(...daySlots.map(s => s.start.getTime())));
-              const dayEnd = new Date(Math.max(...daySlots.map(s => s.end.getTime())));
-
-              // Start iterating from the beginning of the day's availability
-              let currentTime = new Date(dayStart);
-              // Round up to the next 30-minute mark to start
-              currentTime.setSeconds(0, 0);
-              if (currentTime.getMinutes() > 30) {
-                  currentTime.setHours(currentTime.getHours() + 1, 0);
-              } else if (currentTime.getMinutes() > 0) {
-                  currentTime.setMinutes(30);
-              }
-
-              while (currentTime < dayEnd) {
-                  const slotEndTime = new Date(currentTime.getTime() + durationMinutes * 60000);
-                  
-                  // Check if this clean slot fits within any of the raw availability windows
-                  let isAvailable = false;
-                  for (const rawSlot of daySlots) {
-                      if (currentTime >= rawSlot.start && slotEndTime <= rawSlot.end) {
-                          isAvailable = true;
-                          break;
-                      }
-                  }
-                  
-                  if (isAvailable) {
-                      const hh = String(currentTime.getUTCHours()).padStart(2, '0');
-                      const mm = String(currentTime.getUTCMinutes()).padStart(2, '0');
-                      thirtyMinSlots.add(`${hh}:${mm}`);
-                  }
-                  
-                  // Move to the next 30-minute interval
-                  currentTime.setMinutes(currentTime.getMinutes() + 30);
-              }
-
-              if (thirtyMinSlots.size > 0) {
-                  processedSlots.set(dayString, Array.from(thirtyMinSlots).sort());
-              }
-          }
-          return processedSlots;
+          return slotsByDay;
       }
 
       function displayTimes(dayKey) {
           const timePicker = document.getElementById('time-picker');
           timePicker.innerHTML = '';
-          const times = finalSlotsByDay.get(dayKey);
+          const times = finalSlotsByDay.get(dayKey) || [];
           
           document.querySelectorAll('#day-picker .btn').forEach(b => b.classList.remove('btn-primary', 'active'));
           document.querySelector(`#day-picker .btn[data-day-key="${dayKey}"]`).classList.add('btn-primary', 'active');
@@ -257,7 +221,7 @@
           document.getElementById('appointment-title-main').textContent = data.title;
           document.getElementById('appointment-title-booking').textContent = data.title;
           
-          finalSlotsByDay = processSlots(data.slots, data.duration);
+          finalSlotsByDay = groupSlotsByDay(data.slots);
           const dayPicker = document.getElementById('day-picker');
           dayPicker.innerHTML = '';
 
