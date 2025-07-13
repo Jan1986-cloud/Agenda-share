@@ -27,6 +27,7 @@
                         <label for="title" class="form-label">Titel van de afspraak</label>
                         <input type="text" class="form-control" id="title" placeholder="Bijv. Kennismakingsgesprek" required />
                     </div>
+                    <div class="mb-3"><label for="description" class="form-label">Omschrijving</label><textarea class="form-control" id="description" rows="3"></textarea></div>
                     <div class="mb-3">
                         <label for="startAddress" class="form-label">Uw vaste vertrekadres</label>
                         <input type="text" class="form-control" id="startAddress" placeholder="Begin met typen..." required />
@@ -229,6 +230,7 @@
             }
             const data = {
                 title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
                 duration: document.getElementById('duration').value,
                 buffer: document.getElementById('buffer').value,
                 startAddress: document.getElementById('startAddress').value,
@@ -289,6 +291,7 @@
                 document.getElementById('form-title').textContent = 'Link Bewerken';
                 document.getElementById('linkId').value = link.id;
                 document.getElementById('title').value = link.title;
+                document.getElementById('description').value = link.description;
                 document.getElementById('duration').value = link.duration;
                 document.getElementById('buffer').value = link.buffer;
                 document.getElementById('startAddress').value = link.start_address;

@@ -122,6 +122,17 @@ export const createTables = async () => {
         console.log('Migrated links table: added timezone column.');
     }
 
+    // Migration: Add description column to links table if it doesn't exist
+    const descriptionColumn = await client.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name='links' AND column_name='description'
+    `);
+    if (descriptionColumn.rows.length === 0) {
+        await client.query('ALTER TABLE links ADD COLUMN description TEXT');
+        console.log('Migrated links table: added description column.');
+    }
+
     await client.query(`
         CREATE TABLE IF NOT EXISTS appointments (
             id SERIAL PRIMARY KEY,

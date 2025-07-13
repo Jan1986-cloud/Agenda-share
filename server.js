@@ -311,7 +311,12 @@ app.get('/get-availability', async (req, res) => {
     const opts = { link, busySlots, destinationAddress, getTravelTime };
     const slots = await calculateAvailability(opts);
     console.log('SLOT sample', slots[0]);          // debug in Railway-logs
-    res.json({ title: link.title, duration: link.duration, slots });
+    res.json({
+      title: link.title,
+      slots,
+      description: link.description,
+      creatorEmail: user.email
+    });
   } catch (err) {
     console.error('Error get-availability', err);
     res.status(500).send('Fout bij ophalen van beschikbaarheid.');

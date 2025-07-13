@@ -40,6 +40,8 @@
             <h1 id="appointment-title-main" class="card-title text-center mb-4">
               Plan uw afspraak
             </h1>
+            <p id="appointment-description" class="text-center"></p>
+            <p id="appointment-creator" class="text-center text-muted small"></p>
             <p class="text-center text-muted mb-4">
               Voer uw adres in om de reistijd te berekenen en beschikbare tijden
               te zien.
@@ -156,23 +158,45 @@
         switchView('error-view');
       }
 
-      /**
-       * Groepeer rawSlots per dag zonder herberekening.
-       * @param {{start: string}[]} rawSlots
-       * @returns {Map<string,string[]>} Map met key 'YYYY-MM-DD' en value array ['HH:MM',...]
-       */
-      function groupSlotsByDay(rawSlots) {
-          const slotsByDay = new Map();
-          rawSlots.forEach(slot => {
-              const dt = new Date(slot.start);
-              const dayKey = dt.toISOString().split('T')[0];
-              if (!slotsByDay.has(dayKey)) {
-                  slotsByDay.set(dayKey, []);
-              }
-              slotsByDay.get(dayKey).push(dt.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }));
-          });
-          return slotsByDay;
-      }
+        /**
+         * Groepeer de door de backend geleverde UTC-slots per dag en formatteer
+         * de tijd naar de LOKALE tijdzone van de browser.
+         * @param {Array<object>} rawSlots - De array met { start, end } objecten van de server.
+         * @returns {Map<string, Array<string>>} Een Map met datums als sleutels en lijsten van lokale tijden.
+         */
+        function groupSlotsByDay(rawSlots) {
+            const slotsByDay = new Map();
+            rawSlots.forEach(slot => {
+                // Creëer een Date object vanuit de correcte UTC ISO string
+                const dt = new Date(slot.start);
+
+                // Genereer de datum-sleutel in YYYY-MM-DD formaat
+                const year = dt.getUTCFullYear();
+                const month = String(dt.getUTCMonth() + 1).padStart(2, '0');
+                const day = String(dt.getUTCDate()).padStart(2, '0');
+                const dayKey = `${year}-${month}-${day}`;
+
+                // Initialiseer de array voor de dag als deze nog niet bestaat
+                if (!slotsByDay.has(dayKey)) {
+                    slotsByDay.set(dayKey, []);
+                }
+
+                // Converteer de UTC-tijd naar de LOKALE tijd van de browser en voeg toe
+                const localTime = dt.toLocaleTimeString('nl-NL', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    // GEEN timeZone optie hier, zodat de browser automatisch de juiste gebruikt
+                });
+                slotsByDay.get(dayKey).push(localTime);
+            });
+
+            // Sorteer de tijden per dag
+            for (const dayKey of slotsByDay.keys()) {
+                slotsByDay.get(dayKey).sort();
+            }
+
+            return slotsByDay;
+        }
 
       function displayTimes(dayKey) {
           const timePicker = document.getElementById('time-picker');
@@ -217,6 +241,8 @@
           const data = await response.json();
           document.getElementById('appointment-title-main').textContent = data.title;
           document.getElementById('appointment-title-booking').textContent = data.title;
+          document.getElementById('appointment-description').textContent = data.description;
+          document.getElementById('appointment-creator').textContent = `Aangeboden door: ${data.creatorEmail}`;
           
           finalSlotsByDay = groupSlotsByDay(data.slots);
           const dayPicker = document.getElementById('day-picker');
