@@ -87,6 +87,15 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Legenda voor kleuren -->
+                    <div id="legend" class="mt-4 p-3 bg-light border rounded" style="display: none;">
+                        <h4 class="fs-6 mb-3">Uitleg kleuren</h4>
+                        <ul class="list-unstyled mb-0">
+                            <!-- Dynamisch gevuld door JavaScript -->
+                        </ul>
+                    </div>
+
                     <form id="booking-form" style="display: none" class="mt-4">
                         <h3 class="fs-5 mb-3">Bevestig uw gegevens</h3>
                         <div class="mb-3">
@@ -128,13 +137,19 @@
         </div>
     </div>
 
+    <footer class='text-center mt-5 p-4 text-muted border-top'><a href='/privacy.html'>Privacybeleid</a></footer>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const params = new URLSearchParams(window.location.search);
         const linkId = params.get('linkId');
-        let selectedDate = null;
-        let selectedTime = null;
+        let selectedSlot = null;
         let finalSlotsByDay = new Map();
+        const certaintyInfo = {
+            green:  { class: 'btn-success', color: '#198754', icon: 'bi-check-circle-fill', text: 'Reistijd is berekend. Deze afspraak staat als een huis.' },
+            yellow: { class: 'btn-warning', color: '#ffc107', icon: 'bi-exclamation-triangle-fill', text: 'Reistijd onbekend, maar er is een marge van >1 uur. Vraag eventueel om bevestiging bij de planner.' },
+            orange: { class: 'btn-warning', color: '#ffc107', icon: 'bi-exclamation-triangle-fill', text: 'Reistijd onbekend, marge is 30-60 min. Afspraak onder voorbehoud, vraag om bevestiging.' },
+            red:    { class: 'btn-danger',  color: '#dc3545', icon: 'bi-exclamation-octagon-fill', text: 'Reistijd onbekend en <30 min. marge. Hoog risico. Alleen boeken als u zeker weet dat er geen reistijd nodig is vanaf de vorige afspraak.' },
+        };
 
         function switchView(viewId) {
             ['address-view', 'loading-view', 'booking-view', 'confirmation-view', 'error-view'].forEach(id => {
@@ -146,30 +161,40 @@
             document.getElementById('error-message').textContent = message;
             switchView('error-view');
         }
+        
+        function displayLegend() {
+            const legendContainer = document.querySelector('#legend ul');
+            legendContainer.innerHTML = ''; // Leegmaken voor het geval dat
+            // Gebruik een vaste volgorde voor de legenda
+            ['green', 'yellow', 'orange', 'red'].forEach(key => {
+                const info = certaintyInfo[key];
+                const li = document.createElement('li');
+                li.className = 'mb-2 d-flex align-items-start';
+                // Gebruik de kleur uit de config voor het icoon
+                li.innerHTML = `<i class="bi ${info.icon} me-3" style="color: ${info.color}; font-size: 1.2rem;"></i> <div><small>${info.text}</small></div>`;
+                legendContainer.appendChild(li);
+            });
+            document.getElementById('legend').style.display = 'block';
+        }
 
         function groupSlotsByDay(rawSlots) {
             const slotsByDay = new Map();
             rawSlots.forEach(slot => {
                 const dt = new Date(slot.start);
                 const dayKey = dt.toISOString().split('T')[0];
-
                 if (!slotsByDay.has(dayKey)) {
                     slotsByDay.set(dayKey, []);
                 }
-
-                const localTime = dt.toLocaleTimeString('nl-NL', {
-                    hour: '2-digit',
-                    minute: '2-digit',
+                const localTime = dt.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+                slotsByDay.get(dayKey).push({ 
+                    local: localTime, 
+                    utc: slot.start, 
+                    certainty: slot.certainty 
                 });
-                
-                // Sla de originele UTC-string op voor data-integriteit
-                slotsByDay.get(dayKey).push({ local: localTime, utc: slot.start });
             });
-
             for (const dayKey of slotsByDay.keys()) {
                 slotsByDay.get(dayKey).sort((a, b) => a.local.localeCompare(b.local));
             }
-
             return slotsByDay;
         }
 
@@ -182,22 +207,43 @@
             document.querySelector(`#day-picker .btn[data-day-key="${dayKey}"]`).classList.add('btn-primary', 'active');
 
             if (times.length > 0) {
-                times.forEach(time => {
+                times.forEach(slot => {
                     const btn = document.createElement('button');
-                    btn.className = 'btn btn-outline-primary';
-                    btn.textContent = time.local; // Toon lokale tijd
+                    const certainty = certaintyInfo[slot.certainty] || certaintyInfo.red; // Fallback naar rood
+                    
+                    btn.className = `btn ${certainty.class} d-flex justify-content-between align-items-center`;
+                    btn.title = certainty.text;
+                    
+                    const timeSpan = document.createElement('span');
+                    timeSpan.textContent = slot.local;
+                    
+                    const icon = document.createElement('i');
+                    icon.className = `bi ${certainty.icon}`;
+
+                    btn.appendChild(timeSpan);
+                    btn.appendChild(icon);
+
                     btn.onclick = () => {
-                        // Gebruik de originele UTC-string voor de boeking
-                        selectedDate = new Date(time.utc); 
-                        selectedTime = time.local;
-                        document.querySelectorAll('#time-picker .btn').forEach(b => b.classList.remove('btn-primary', 'active'));
-                        btn.classList.add('btn-primary', 'active');
+                        selectedSlot = slot;
+                        document.querySelectorAll('#time-picker .btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
                         document.getElementById('booking-form').style.display = 'block';
+                        
+                        const confirmBtn = document.querySelector('#booking-form button[type="submit"]');
+                        if (slot.certainty !== 'green') {
+                            confirmBtn.textContent = 'Bevestig (onder voorbehoud)';
+                            confirmBtn.classList.remove('btn-success');
+                            confirmBtn.classList.add('btn-warning');
+                        } else {
+                            confirmBtn.textContent = 'Afspraak bevestigen';
+                            confirmBtn.classList.remove('btn-warning');
+                            confirmBtn.classList.add('btn-success');
+                        }
                     };
                     timePicker.appendChild(btn);
                 });
             } else {
-                timePicker.innerHTML = '<p class="text-center text-muted">Geen tijden beschikbaar op deze dag.</p>';
+                 timePicker.innerHTML = '<p class="text-center text-muted">Geen tijden beschikbaar op deze dag.</p>';
             }
         }
 
@@ -239,6 +285,7 @@
                 });
 
                 switchView('booking-view');
+                displayLegend(); // Toon de legenda
                 displayTimes(Array.from(finalSlotsByDay.keys()).sort()[0]);
 
             } catch (error) {
@@ -257,7 +304,7 @@
                 const response = await fetch('/book-appointment', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ linkId, startTime: selectedDate.toISOString(), name, email, destinationAddress, phone }),
+                    body: JSON.stringify({ linkId, startTime: selectedSlot.utc, name, email, destinationAddress, phone }),
                 });
                 if (!response.ok) throw new Error('Kon de afspraak niet boeken.');
                 switchView('confirmation-view');
