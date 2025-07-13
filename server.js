@@ -12,6 +12,28 @@ import fetch from 'node-fetch';
 import { calculateAvailability } from './utils/availability-logic.js';
 import { getTravelTime } from './utils/travel-time.js';
 
+/**
+ * Maak een geauthenticeerde OAuth2-client voor een gebruiker en update tokens automatisch.
+ * @param {string} userId
+ * @returns {Promise<import('googleapis').OAuth2Client>}
+ */
+async function getAuthenticatedClient(userId) {
+	const result = await pool.query('SELECT tokens FROM users WHERE id = $1', [userId]);
+	if (!result.rows.length) throw new Error('User not found');
+	const { tokens } = result.rows[0];
+	const auth = new google.auth.OAuth2(
+		process.env.GOOGLE_CLIENT_ID,
+		process.env.GOOGLE_CLIENT_SECRET,
+		process.env.GOOGLE_REDIRECT_URI
+	);
+	auth.setCredentials(tokens);
+	auth.on('tokens', refreshed => {
+		const newTokens = { ...tokens, ...refreshed };
+		pool.query('UPDATE users SET tokens = $1 WHERE id = $2', [newTokens, userId]).catch(console.error);
+	});
+	return auth;
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -139,12 +161,7 @@ app.get('/api/links', async (req, res) => {
 app.get('/api/calendars', async (req, res) => {
     if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
     try {
-        const userResult = await pool.query('SELECT tokens FROM users WHERE id = $1', [req.session.userId]);
-        if (userResult.rows.length === 0) return res.status(404).send('Gebruiker niet gevonden.');
-
-        const { tokens } = userResult.rows[0];
-        const auth = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, process.env.GOOGLE_REDIRECT_URI);
-        auth.setCredentials(tokens);
+        const auth = await getAuthenticatedClient(req.session.userId);
 
         const calendar = google.calendar({ version: 'v3', auth });
         const calendarList = await calendar.calendarList.list();
@@ -267,17 +284,8 @@ app.get('/get-availability', async (req, res) => {
       await pool.query('SELECT * FROM users WHERE id = $1', [link.user_id]);
     if (!user) return res.status(404).json({ error: 'user not found' });
 
-    // ── Google auth
-    const auth = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_REDIRECT_URI
-    );
-    auth.setCredentials(user.tokens);
-    auth.on('tokens', t =>
-      pool.query('UPDATE users SET tokens=$1 WHERE id=$2',
-        [{ ...user.tokens, ...t }, user.id]).catch(console.error)
-    );
+    // geauthenticeerde OAuth2-client per gebruiker
+    const auth = await getAuthenticatedClient(link.user_id);
     const calendar = google.calendar({ version: 'v3', auth });
 
     // ── Busy events ophalen, maar vangen bij token-fout
@@ -331,13 +339,7 @@ app.post('/book-appointment', async (req, res) => {
     const userResult = await pool.query('SELECT tokens FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) return res.status(404).send('Gebruiker niet gevonden.');
 
-    const { tokens } = userResult.rows[0];
-    const auth = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, process.env.GOOGLE_REDIRECT_URI);
-    auth.setCredentials(tokens);
-    auth.on('tokens', (refreshedTokens) => {
-      const newTokens = { ...tokens, ...refreshedTokens };
-      pool.query('UPDATE users SET tokens = $1 WHERE id = $2', [newTokens, userId]).catch(err => console.error('Error updating tokens:', err));
-    });
+    const auth = await getAuthenticatedClient(userId);
 
     const calendar = google.calendar({ version: 'v3', auth });
     const appointmentStart = new Date(startTime);
