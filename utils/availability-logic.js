@@ -1,86 +1,135 @@
+// availability-logic.js
+// FINALE, CORRECTE IMPLEMENTATIE
+
 /**
- * Bereken vrije afsprakenlots op basis van werktijden, reistijd en bezette tijden.
+ * Berekent de beschikbare afspraak-slots op basis van werktijden, bestaande afspraken en reistijd.
  * Alle interne datumberekeningen verlopen strikt in UTC.
  *
- * @param {Object} options
- * @param {import('../server.js').LinkRow} options.link
- * @param {{start: Date, end: Date}[]} options.busySlots
- * @param {string} options.destinationAddress
- * @param {(from: string, to: string) => Promise<number>} options.getTravelTime  Reistijd in seconden
- * @param {number} [options.daysAhead=7]
- * @returns {Promise<{start: string, end: string, start_utc: string}[]>}
+ * @param {object} options - De configuratie-opties voor de berekening.
+ * @param {object} options.link - Het link-object uit de database.
+ * @param {Array<object>} options.busySlots - Array van bezette slots uit Google Calendar. Elk object moet { start: Date, end: Date, location: string } bevatten.
+ * @param {string} options.destinationAddress - Het doeladres voor de nieuwe afspraak.
+ * @param {function(string, string): Promise<number>} options.getTravelTime - Functie die reistijd in seconden retourneert.
+ * @param {number} [options.daysAhead=7] - Het aantal dagen vooruit om te controleren.
+ * @returns {Promise<Array<object>>} Een Promise die resolved met een array van beschikbare slots.
  */
-export async function calculateAvailability({ link, busySlots, destinationAddress, getTravelTime, daysAhead = 7 }) {
-	const {
-		availability,
-		duration,
-		buffer,
-		start_address: startAddress,
-		include_travel_start: incTravelStart,
-		include_travel_end: incTravelEnd,
-		workday_mode: mode,
-		timezone = 'Europe/Amsterdam',
-	} = link;
+export async function calculateAvailability({
+  link,
+  busySlots,
+  destinationAddress,
+  getTravelTime,
+  daysAhead = 7,
+}) {
+  const {
+    availability,
+    duration,
+    buffer,
+    start_address: startAddress,
+    workday_mode: workdayMode,
+    include_travel_start: includeTravelStart,
+    include_travel_end: includeTravelEnd,
+    max_travel_time: maxTravelTime,
+  } = link;
 
-	const bufferedBusy = busySlots.map(({ start, end }) => ({
-		start: new Date(start.getTime() - buffer * 60000),
-		end: new Date(end.getTime() + buffer * 60000),
-	}));
+  const availableSlots = [];
+  const now = new Date();
+  const sortedBusySlots = busySlots.sort((a, b) => a.start.getTime() - b.start.getTime());
 
-	const result = [];
-	const MS_PER_MIN = 60000;
-	const STEP_MS = 15 * MS_PER_MIN;
-	const now = new Date();
+  for (let d = 1; d <= daysAhead; d++) {
+    const currentDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + d));
+    const dayOfWeek = currentDay.getUTCDay();
 
-	for (let dayOffset = 1; dayOffset <= daysAhead; dayOffset++) {
-		const year = now.getUTCFullYear();
-		const month = now.getUTCMonth();
-		const date = now.getUTCDate() + dayOffset;
-		const dayUtc = new Date(Date.UTC(year, month, date));
+    const rule = availability.find(r => r.dayOfWeek === dayOfWeek);
+    if (!rule) continue;
 
-		const rule = availability.find(r => r.dayOfWeek === dayUtc.getUTCDay());
-		if (!rule) continue;
+    const [startHour, startMinute] = rule.startTime.split(':').map(Number);
+    const [endHour, endMinute] = rule.endTime.split(':').map(Number);
 
-		const [startHour, startMin] = rule.startTime.split(':').map(Number);
-		const [endHour, endMin] = rule.endTime.split(':').map(Number);
-		const dayStartMs = Date.UTC(year, month, date, startHour, startMin);
-		const dayEndMs = Date.UTC(year, month, date, endHour, endMin);
+    const dayStart = new Date(Date.UTC(currentDay.getUTCFullYear(), currentDay.getUTCMonth(), currentDay.getUTCDate(), startHour, startMinute));
+    const dayEnd = new Date(Date.UTC(currentDay.getUTCFullYear(), currentDay.getUTCMonth(), currentDay.getUTCDate(), endHour, endMinute));
 
-		let slotCursorMs = dayStartMs;
-		let prevLocation = startAddress;
-		while (slotCursorMs <= dayEndMs) {
-			const travelToSec = incTravelStart ? await getTravelTime(prevLocation, destinationAddress) : 0;
-			const travelBackSec = incTravelEnd ? await getTravelTime(destinationAddress, startAddress) : 0;
-			const travelToMs = travelToSec * 1000;
-			const travelBackMs = travelBackSec * 1000;
+    let potentialStart = new Date(dayStart.getTime());
 
-			const apptStartMs = mode === 'FLEXIBEL' && incTravelStart
-				? slotCursorMs + travelToMs
-				: slotCursorMs;
-			const apptEndMs = apptStartMs + duration * MS_PER_MIN;
+    while (potentialStart < dayEnd) {
+      // Stap 1: Bepaal de échte oorsprong voor de reistijd.
+      const lastBusySlotBeforePotentialStart = sortedBusySlots
+        .filter(slot => slot.end.getTime() <= potentialStart.getTime())
+        .pop();
+      
+      const origin = lastBusySlotBeforePotentialStart?.location || startAddress;
 
-			const blockEndMs = apptEndMs + (incTravelEnd ? travelBackMs : 0);
-			if (blockEndMs > dayEndMs) break;
+      // Stap 2: Bereken reistijd vanaf de échte oorsprong.
+      const travelToSeconds = await getTravelTime(origin, destinationAddress);
+      
+      if (maxTravelTime && (travelToSeconds / 60) > maxTravelTime) {
+        potentialStart.setUTCMinutes(potentialStart.getUTCMinutes() + 15);
+        continue;
+      }
+      
+      const travelToMs = travelToSeconds * 1000;
 
-			const blockStartMs = apptStartMs - (incTravelStart ? travelToMs : 0);
+      // Stap 3: Bepaal de starttijd van de afspraak, rekening houdend met de vorige afspraak.
+      let appointmentStart = new Date(potentialStart.getTime());
+      if (lastBusySlotBeforePotentialStart) {
+        const availableAfterBusy = lastBusySlotBeforePotentialStart.end.getTime() + buffer * 60000;
+        appointmentStart = new Date(Math.max(potentialStart.getTime(), availableAfterBusy));
+      }
 
-			const clash = bufferedBusy.some(b => blockStartMs < b.end.getTime() && b.start.getTime() < blockEndMs);
+      // VASTE modus: reistijd is onderdeel van de werkdag. Starttijd afspraak is de berekende `appointmentStart`.
+      // FLEXIBELE modus: reistijd komt bovenop de beschikbare tijd.
+      if (workdayMode === 'FLEXIBEL') {
+         if (lastBusySlotBeforePotentialStart) {
+             appointmentStart = new Date(lastBusySlotBeforePotentialStart.end.getTime() + buffer * 60000 + travelToMs);
+         } else if (includeTravelStart) {
+             appointmentStart = new Date(dayStart.getTime() + travelToMs);
+         }
+      }
 
-			if (!clash) {
-				const apptStartDate = new Date(apptStartMs);
-				const apptEndDate = new Date(apptEndMs);
-				result.push({
-					start: apptStartDate.toLocaleString('nl-NL', { timeZone: timezone }),
-					end: apptEndDate.toLocaleString('nl-NL', { timeZone: timezone }),
-					start_utc: apptStartDate.toISOString(),
-				});
-				slotCursorMs = apptEndMs + buffer * MS_PER_MIN;
-				prevLocation = destinationAddress;
-			} else {
-				slotCursorMs += STEP_MS;
-			}
-		}
-	}
+      // Afronden op het volgende kwartier
+      const roundedMinutes = Math.ceil(appointmentStart.getUTCMinutes() / 15) * 15;
+      appointmentStart.setUTCMinutes(roundedMinutes, 0, 0);
 
-	return result;
+      if(appointmentStart < potentialStart) {
+          potentialStart.setUTCMinutes(potentialStart.getUTCMinutes() + 15);
+          continue;
+      }
+      
+      const appointmentEnd = new Date(appointmentStart.getTime() + duration * 60000);
+
+      // Stap 4: Controleer of het volledige blok (inclusief reistijd terug) past.
+      const travelBackMs = includeTravelEnd ? (await getTravelTime(destinationAddress, startAddress)) * 1000 : 0;
+      const totalBlockEnd = new Date(appointmentEnd.getTime() + travelBackMs);
+      
+      if (totalBlockEnd.getTime() > dayEnd.getTime()) {
+        potentialStart.setUTCMinutes(potentialStart.getUTCMinutes() + 15);
+        continue;
+      }
+
+      // Stap 5: Finale clash-detectie met alle bestaande afspraken.
+      let hasConflict = false;
+      for (const busy of sortedBusySlots) {
+        if (appointmentStart.getTime() < busy.end.getTime() && appointmentEnd.getTime() > busy.start.getTime()) {
+          hasConflict = true;
+          // Spring naar het einde van het conflict-slot voor de volgende poging
+          potentialStart = new Date(busy.end.getTime() + buffer * 60000);
+          break;
+        }
+      }
+
+      if (!hasConflict) {
+        availableSlots.push({
+          start_utc: appointmentStart.toISOString(),
+          end_utc: appointmentEnd.toISOString(),
+        });
+        potentialStart = new Date(appointmentStart.getTime());
+        potentialStart.setUTCMinutes(potentialStart.getUTCMinutes() + 15);
+      }
+    }
+  }
+
+  // Verwijder duplicaten en sorteer
+  const uniqueSlots = Array.from(new Set(availableSlots.map(s => s.start_utc)))
+    .map(start_utc => availableSlots.find(s => s.start_utc === start_utc));
+
+  return uniqueSlots.sort((a, b) => new Date(a.start_utc).getTime() - new Date(b.start_utc).getTime());
 }
