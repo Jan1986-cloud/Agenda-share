@@ -166,13 +166,10 @@
           rawSlots.forEach(slot => {
               const dt = new Date(slot.start);
               const dayKey = dt.toISOString().split('T')[0];
-              const hh = String(dt.getUTCHours()).padStart(2, '0');
-              const mm = String(dt.getUTCMinutes()).padStart(2, '0');
-              const timeKey = `${hh}:${mm}`;
               if (!slotsByDay.has(dayKey)) {
                   slotsByDay.set(dayKey, []);
               }
-              slotsByDay.get(dayKey).push(timeKey);
+              slotsByDay.get(dayKey).push(dt.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }));
           });
           return slotsByDay;
       }
