@@ -158,45 +158,31 @@
         switchView('error-view');
       }
 
-        /**
-         * Groepeer de door de backend geleverde UTC-slots per dag en formatteer
-         * de tijd naar de LOKALE tijdzone van de browser.
-         * @param {Array<object>} rawSlots - De array met { start, end } objecten van de server.
-         * @returns {Map<string, Array<string>>} Een Map met datums als sleutels en lijsten van lokale tijden.
-         */
         function groupSlotsByDay(rawSlots) {
-            const slotsByDay = new Map();
-            rawSlots.forEach(slot => {
-                // Creëer een Date object vanuit de correcte UTC ISO string
-                const dt = new Date(slot.start);
+          const slotsByDay = new Map();
+          rawSlots.forEach(slot => {
+              const dt = new Date(slot.start);
+              const dayKey = dt.toISOString().split('T')[0];
 
-                // Genereer de datum-sleutel in YYYY-MM-DD formaat
-                const year = dt.getUTCFullYear();
-                const month = String(dt.getUTCMonth() + 1).padStart(2, '0');
-                const day = String(dt.getUTCDate()).padStart(2, '0');
-                const dayKey = `${year}-${month}-${day}`;
+              if (!slotsByDay.has(dayKey)) {
+                  slotsByDay.set(dayKey, []);
+              }
 
-                // Initialiseer de array voor de dag als deze nog niet bestaat
-                if (!slotsByDay.has(dayKey)) {
-                    slotsByDay.set(dayKey, []);
-                }
+              const localTime = dt.toLocaleTimeString('nl-NL', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+              });
+              
+              slotsByDay.get(dayKey).push({ local: localTime, utc: slot.start });
+          });
+          
+          // Sorteer de tijden per dag
+          for (const dayKey of slotsByDay.keys()) {
+              slotsByDay.get(dayKey).sort((a, b) => a.local.localeCompare(b.local));
+          }
 
-                // Converteer de UTC-tijd naar de LOKALE tijd van de browser en voeg toe
-                const localTime = dt.toLocaleTimeString('nl-NL', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    // GEEN timeZone optie hier, zodat de browser automatisch de juiste gebruikt
-                });
-                slotsByDay.get(dayKey).push(localTime);
-            });
-
-            // Sorteer de tijden per dag
-            for (const dayKey of slotsByDay.keys()) {
-                slotsByDay.get(dayKey).sort();
-            }
-
-            return slotsByDay;
-        }
+          return slotsByDay;
+      }
 
       function displayTimes(dayKey) {
           const timePicker = document.getElementById('time-picker');
@@ -210,12 +196,10 @@
               times.forEach(time => {
                   const btn = document.createElement('button');
                   btn.className = 'btn btn-outline-primary';
-                  btn.textContent = time;
+                  btn.textContent = time.local;
                   btn.onclick = () => {
-                      const [y, m, d] = dayKey.split('-').map(Number);
-                      const [hh, mm] = time.split(':').map(Number);
-                      selectedDate = new Date(Date.UTC(y, m - 1, d, hh, mm));
-                      selectedTime = time;
+                      selectedDate = new Date(time.utc);
+                      selectedTime = time.local;
                       document.querySelectorAll('#time-picker .btn').forEach(b => b.classList.remove('btn-primary', 'active'));
                       btn.classList.add('btn-primary', 'active');
                       document.getElementById('booking-form').style.display = 'block';
