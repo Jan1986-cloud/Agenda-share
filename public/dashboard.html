@@ -172,19 +172,43 @@
                     const item = document.createElement('li');
                     item.className = 'list-group-item d-flex justify-content-between align-items-center p-3 link-item';
                     const shareUrl = `${window.location.origin}/schedule.html?linkId=${link.id}`;
-                    item.innerHTML = `
-                        <div>
-                            <h6 class="mb-0">${link.title}</h6>
-                            <a href="${shareUrl}" target="_blank" class="text-muted small">${shareUrl}</a>
-                        </div>
-                        <div class="d-flex align-items-center">
-                            <button class="btn btn-primary copy-btn me-2" data-share-url="${shareUrl}" title="Kopieer link">
-                                <i class="bi bi-clipboard"></i> Kopieer
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary edit-btn me-2" data-link-id="${link.id}" title="Bewerk"><i class="bi bi-pencil"></i></button>
-                            <button class="btn btn-sm btn-outline-danger delete-btn" data-link-id="${link.id}" title="Verwijder"><i class="bi bi-trash"></i></button>
-                        </div>
-                    `;
+                    // Link title en share-URL
+                    const leftDiv = document.createElement('div');
+                    const titleEl = document.createElement('h6');
+                    titleEl.className = 'mb-0';
+                    titleEl.textContent = link.title;
+                    leftDiv.appendChild(titleEl);
+                    const shareEl = document.createElement('a');
+                    shareEl.href = shareUrl;
+                    shareEl.target = '_blank';
+                    shareEl.className = 'text-muted small';
+                    shareEl.textContent = shareUrl;
+                    leftDiv.appendChild(shareEl);
+
+                    // Actieknoppen
+                    const rightDiv = document.createElement('div');
+                    rightDiv.className = 'd-flex align-items-center';
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'btn btn-primary copy-btn me-2';
+                    copyBtn.setAttribute('data-share-url', shareUrl);
+                    copyBtn.title = 'Kopieer link';
+                    copyBtn.innerHTML = '<i class="bi bi-clipboard"></i> Kopieer';
+                    rightDiv.appendChild(copyBtn);
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'btn btn-sm btn-outline-secondary edit-btn me-2';
+                    editBtn.setAttribute('data-link-id', link.id);
+                    editBtn.title = 'Bewerk';
+                    editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
+                    rightDiv.appendChild(editBtn);
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'btn btn-sm btn-outline-danger delete-btn';
+                    deleteBtn.setAttribute('data-link-id', link.id);
+                    deleteBtn.title = 'Verwijder';
+                    deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                    rightDiv.appendChild(deleteBtn);
+
+                    item.appendChild(leftDiv);
+                    item.appendChild(rightDiv);
                     list.appendChild(item);
                 });
             } catch (error) {
