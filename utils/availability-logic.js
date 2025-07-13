@@ -1,96 +1,86 @@
-// utils/availability-logic.js
-// ───────────────────────────────────────────────────────────────────────────
-// Eén zelf-contained functie om vrije slots te berekenen.
-// Houdt rekening met:
-//   • werktijden per dag (availability[])
-//   • reistijd heen/terug optioneel
-//   • FLEXIBEL (= reistijd eerst, afspraak daarna) vs VAST (= eerst afspraak)
-//   • buffer tussen afspraken
-//   • drukke events uit Google Calendar
-//   • locale weergave + UTC-iso voor booking
-// ───────────────────────────────────────────────────────────────────────────
-import {
-  addMinutes,
-  differenceInMinutes,
-  areIntervalsOverlapping,
-  set,
-} from 'date-fns';
-
 /**
- * @param {Object} opts
- * @param {import('../server.js').LinkRow}  opts.link   volledige rij uit links
- * @param {{start:Date,end:Date}[]}         opts.busySlots  UTC-datums
- * @param {string}                          opts.destinationAddress
- * @param {function(string,string):Promise<number>} opts.getTravelTime → seconden
- * @param {number} [opts.daysAhead=7]
- * @returns {Promise<{start:string,end:string,start_utc:string}[]>}
+ * Bereken vrije afsprakenlots op basis van werktijden, reistijd en bezette tijden.
+ * Alle interne datumberekeningen verlopen strikt in UTC.
+ *
+ * @param {Object} options
+ * @param {import('../server.js').LinkRow} options.link
+ * @param {{start: Date, end: Date}[]} options.busySlots
+ * @param {string} options.destinationAddress
+ * @param {(from: string, to: string) => Promise<number>} options.getTravelTime  Reistijd in seconden
+ * @param {number} [options.daysAhead=7]
+ * @returns {Promise<{start: string, end: string, start_utc: string}[]>}
  */
-export async function calculateAvailability ({
-  link,
-  busySlots,
-  destinationAddress,
-  getTravelTime,
-  daysAhead = 7,
-}) {
-  const {
-    availability,
-    duration,
-    buffer,
-    start_address: startAddress,
-    include_travel_start: incTravelStart,
-    include_travel_end:   incTravelEnd,
-    workday_mode:         mode,              // "VAST" of "FLEXIBEL"
-    timezone = 'Europe/Amsterdam',
-  } = link;
+export async function calculateAvailability({ link, busySlots, destinationAddress, getTravelTime, daysAhead = 7 }) {
+	const {
+		availability,
+		duration,
+		buffer,
+		start_address: startAddress,
+		include_travel_start: incTravelStart,
+		include_travel_end: incTravelEnd,
+		workday_mode: mode,
+		timezone = 'Europe/Amsterdam',
+	} = link;
 
-  // Maak busy-intervals alvast “buffered”
-  const busy = busySlots.map(b => ({
-    start: addMinutes(b.start, -buffer),
-    end:   addMinutes(b.end,   +buffer),
-  }));
+	const bufferedBusy = busySlots.map(({ start, end }) => ({
+		start: new Date(start.getTime() - buffer * 60000),
+		end: new Date(end.getTime() + buffer * 60000),
+	}));
 
-  const gridMin   = 15;
-  const result    = [];
-  const todayUtc  = new Date();
+	const result = [];
+	const MS_PER_MIN = 60000;
+	const STEP_MS = 15 * MS_PER_MIN;
+	const now = new Date();
 
-  // Reistijd 1× opvragen en cachen (± 2 sec per Distance-Matrix-call)
-  const secGo   = incTravelStart ? await getTravelTime(startAddress, destinationAddress) : 0;
-  const secBack = incTravelEnd   ? await getTravelTime(destinationAddress, startAddress) : 0;
+	for (let dayOffset = 1; dayOffset <= daysAhead; dayOffset++) {
+		const year = now.getUTCFullYear();
+		const month = now.getUTCMonth();
+		const date = now.getUTCDate() + dayOffset;
+		const dayUtc = new Date(Date.UTC(year, month, date));
 
-  for (let d = 1; d <= daysAhead; d++) {
-    const dayUtc       = new Date(Date.UTC(todayUtc.getUTCFullYear(), todayUtc.getUTCMonth(), todayUtc.getUTCDate() + d));
-    const rule         = availability.find(r => r.dayOfWeek === dayUtc.getUTCDay());
-    if (!rule) continue;
+		const rule = availability.find(r => r.dayOfWeek === dayUtc.getUTCDay());
+		if (!rule) continue;
 
-    // “08:30” → Date in UTC op dezelfde dag
-    const dayStartUtc  = set(dayUtc, { hours: +rule.startTime.split(':')[0], minutes:+rule.startTime.split(':')[1], seconds:0, milliseconds:0 });
-    const dayEndUtc    = set(dayUtc, { hours: +rule.endTime.split(':')[0],   minutes:+rule.endTime.split(':')[1],   seconds:0, milliseconds:0 });
+		const [startHour, startMin] = rule.startTime.split(':').map(Number);
+		const [endHour, endMin] = rule.endTime.split(':').map(Number);
+		const dayStartMs = Date.UTC(year, month, date, startHour, startMin);
+		const dayEndMs = Date.UTC(year, month, date, endHour, endMin);
 
-    for (let slotStart = new Date(dayStartUtc); addMinutes(slotStart,duration) <= dayEndUtc; ) {
+		let slotCursorMs = dayStartMs;
+		let prevLocation = startAddress;
+		while (slotCursorMs <= dayEndMs) {
+			const travelToSec = incTravelStart ? await getTravelTime(prevLocation, destinationAddress) : 0;
+			const travelBackSec = incTravelEnd ? await getTravelTime(destinationAddress, startAddress) : 0;
+			const travelToMs = travelToSec * 1000;
+			const travelBackMs = travelBackSec * 1000;
 
-      // FLEXIBEL = afspraak na reistijd; VAST = eerst afspraak dan reistijd
-      const apptStart = mode === 'FLEXIBEL' ? addMinutes(slotStart,  secGo/60) : slotStart;
-      const apptEnd   = addMinutes(apptStart, duration);
-      const totalInt  = {
-        start: incTravelStart ? new Date(apptStart.getTime() - secGo*1000) : apptStart,
-        end:   incTravelEnd   ? new Date(apptEnd .getTime() + secBack*1000): apptEnd ,
-      };
+			const apptStartMs = mode === 'FLEXIBEL' && incTravelStart
+				? slotCursorMs + travelToMs
+				: slotCursorMs;
+			const apptEndMs = apptStartMs + duration * MS_PER_MIN;
 
-      const clashes = busy.some(b => areIntervalsOverlapping(totalInt, b));
+			const blockEndMs = apptEndMs + (incTravelEnd ? travelBackMs : 0);
+			if (blockEndMs > dayEndMs) break;
 
-      if (!clashes) {
-        result.push({
-          start: apptStart.toLocaleString('nl-NL', { timeZone: timezone }),
-          end:   apptEnd  .toLocaleString('nl-NL', { timeZone: timezone }),
-          start_utc: apptStart.toISOString(),
-        });
-        // Volgende kans = einde afspraak + buffer
-        slotStart = addMinutes(apptEnd, buffer);
-      } else {
-        // Verschuif met grid tot we uit het overlap-blok zijn
-        slotStart = addMinutes(slotStart, gridMin);
-      }
-    }
-  }
-  return result;
+			const blockStartMs = apptStartMs - (incTravelStart ? travelToMs : 0);
+
+			const clash = bufferedBusy.some(b => blockStartMs < b.end.getTime() && b.start.getTime() < blockEndMs);
+
+			if (!clash) {
+				const apptStartDate = new Date(apptStartMs);
+				const apptEndDate = new Date(apptEndMs);
+				result.push({
+					start: apptStartDate.toLocaleString('nl-NL', { timeZone: timezone }),
+					end: apptEndDate.toLocaleString('nl-NL', { timeZone: timezone }),
+					start_utc: apptStartDate.toISOString(),
+				});
+				slotCursorMs = apptEndMs + buffer * MS_PER_MIN;
+				prevLocation = destinationAddress;
+			} else {
+				slotCursorMs += STEP_MS;
+			}
+		}
+	}
+
+	return result;
 }
