@@ -1,5 +1,5 @@
-// Bestand: availability-logic.js
-// VERBETERDE VERSIE
+// Bestand: utils/availability-logic.js
+// Definitieve, productie-waardige versie
 
 export async function calculateAvailability(options) {
     const {
@@ -15,195 +15,92 @@ export async function calculateAvailability(options) {
         includeTravelEnd,
         getTravelTime,
     } = options;
+
     const availableSlots = [];
     const appointmentDurationMs = appointmentDuration * 60000;
     const bufferMs = buffer * 60000;
     const now = new Date();
-    // Helper functie om te checken of twee tijdvakken overlappen
-    const hasOverlap = (start1, end1, start2, end2) => {
-        return start1 < end2 && end1 > start2;
-    };
-    // Helper functie om tijd af te ronden naar het volgende kwartier
+
     const roundToNext15Minutes = (date) => {
-        const rounded = new Date(date);
-        const minutes = rounded.getUTCMinutes();
-        const remainder = minutes % 15;
-        if (remainder !== 0) {
-            rounded.setUTCMinutes(minutes + (15 - remainder), 0, 0);
-        } else {
-            rounded.setUTCSeconds(0, 0);
+        const d = new Date(date);
+        const minutes = d.getUTCMinutes();
+        if (minutes % 15 !== 0) {
+            d.setUTCMinutes(minutes + (15 - (minutes % 15)), 0, 0);
         }
-        return rounded;
+        return d;
     };
-    // Loop door de komende 7 dagen
+
     for (let d = 0; d <= 7; d++) {
-        const currentDay = new Date(Date.UTC(
-            now.getUTCFullYear(),
-            now.getUTCMonth(),
-            now.getUTCDate() + d
-        ));
+        const currentDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + d));
         const dayOfWeek = currentDay.getUTCDay();
 
-        // Vind de beschikbaarheidsregel voor deze dag
         const rule = availabilityRules.find(r => r.dayOfWeek === dayOfWeek);
-        if (!rule) continue; // Geen regel = niet beschikbaar
+        if (!rule) continue;
 
         const [startHour, startMinute] = rule.startTime.split(':').map(Number);
         const [endHour, endMinute] = rule.endTime.split(':').map(Number);
 
-        // Werkdag start en einde in UTC
-        const dayStart = new Date(Date.UTC(
-            currentDay.getUTCFullYear(),
-            currentDay.getUTCMonth(),
-            currentDay.getUTCDate(),
-            startHour,
-            startMinute
-        ));
-
-        const dayEnd = new Date(Date.UTC(
-            currentDay.getUTCFullYear(),
-            currentDay.getUTCMonth(),
-            currentDay.getUTCDate(),
-            endHour,
-            endMinute
-        ));
-
-        // Filter busy slots voor deze dag
+        const dayStart = new Date(Date.UTC(currentDay.getUTCFullYear(), currentDay.getUTCMonth(), currentDay.getUTCDate(), startHour, startMinute));
+        const dayEnd = new Date(Date.UTC(currentDay.getUTCFullYear(), currentDay.getUTCMonth(), currentDay.getUTCDate(), endHour, endMinute));
+        
         const todayBusySlots = busySlots
-            .filter(slot => {
-                const slotDate = new Date(slot.start);
-                return slotDate.getUTCFullYear() === currentDay.getUTCFullYear() &&
-                    slotDate.getUTCMonth() === currentDay.getUTCMonth() &&
-                    slotDate.getUTCDate() === currentDay.getUTCDate();
-            })
+            .filter(slot => slot && slot.start && slot.end)
+            .map(s => ({ start: new Date(s.start), end: new Date(s.end), location: s.location || startAddress }))
+            .filter(slot => slot.start.getUTCFullYear() === currentDay.getUTCFullYear() &&
+                             slot.start.getUTCMonth() === currentDay.getUTCMonth() &&
+                             slot.start.getUTCDate() === currentDay.getUTCDate())
             .sort((a, b) => a.start.getTime() - b.start.getTime());
 
-        // Start met het eerste mogelijke tijdstip
-        let currentTime = new Date(dayStart);
+        let cursor = new Date(dayStart.getTime());
 
-        if (d === 0 && now > dayStart) {
-            currentTime = roundToNext15Minutes(now);
-            if (currentTime >= dayEnd) continue;
-        }
+        while (cursor.getTime() < dayEnd.getTime()) {
+            let potentialSlotStart = new Date(cursor.getTime());
+            
+            const lastAppointmentBefore = todayBusySlots.filter(s => s.end.getTime() <= potentialSlotStart.getTime()).pop();
+            const origin = lastAppointmentBefore ? (lastAppointmentBefore.location || startAddress) : startAddress;
 
-        // Loop door de dag in stappen van 15 minuten
-        while (currentTime < dayEnd) {
-            let slotStart = new Date(currentTime);
-            let slotEnd = new Date(slotStart.getTime() + appointmentDurationMs);
-
-            if (slotEnd > dayEnd) {
-                break; 
-            }
-
-            let travelTimeToMs = 0;
-
-            const previousAppointment = todayBusySlots
-                .filter(slot => slot.end <= slotStart)
-                .sort((a, b) => b.end.getTime() - a.end.getTime())[0];
-
-            const nextAppointment = todayBusySlots
-                .find(slot => slot.start >= slotEnd);
-
-            const originForTravel = previousAppointment ?
-                previousAppointment.location : startAddress;
-
-            try {
-                const travelTimeSeconds = await getTravelTime(originForTravel, destinationAddress);
-
-                if (maxTravelTime && (travelTimeSeconds / 60) > maxTravelTime) {
-                    currentTime.setUTCMinutes(currentTime.getUTCMinutes() + 15);
-                    continue;
-                }
-
-                travelTimeToMs = travelTimeSeconds * 1000;
-            } catch (error) {
-                console.error('Error getting travel time:', error);
-                currentTime.setUTCMinutes(currentTime.getUTCMinutes() + 15);
+            const travelToSeconds = await getTravelTime(origin, destinationAddress).catch(() => null);
+            if (travelToSeconds === null || (maxTravelTime && (travelToSeconds / 60) > maxTravelTime)) {
+                cursor.setUTCMinutes(cursor.getUTCMinutes() + 15);
                 continue;
             }
+            const travelToMs = travelToSeconds * 1000;
 
+            if (lastAppointmentBefore) {
+                potentialSlotStart = new Date(Math.max(potentialSlotStart.getTime(), lastAppointmentBefore.end.getTime() + bufferMs));
+            }
+            
             if (workdayMode === 'FLEXIBEL') {
-                if (previousAppointment) {
-                    const earliestStart = new Date(previousAppointment.end.getTime() + travelTimeToMs);
-                    if (earliestStart > slotStart) {
-                        slotStart = roundToNext15Minutes(earliestStart);
-                        slotEnd = new Date(slotStart.getTime() + appointmentDurationMs);
-                        
-                        if (slotEnd > dayEnd) break;
-                    }
-                } else if (includeTravelStart) {
-                    const earliestStart = new Date(dayStart.getTime() + travelTimeToMs);
-                    if (earliestStart > slotStart) {
-                        slotStart = roundToNext15Minutes(earliestStart);
-                        slotEnd = new Date(slotStart.getTime() + appointmentDurationMs);
+                 if(lastAppointmentBefore){
+                     potentialSlotStart = new Date(lastAppointmentBefore.end.getTime() + bufferMs + travelToMs);
+                 } else if (includeTravelStart){
+                     potentialSlotStart = new Date(dayStart.getTime() + travelToMs);
+                 }
+            }
+            
+            potentialSlotStart = roundToNext15Minutes(potentialSlotStart);
+            const potentialSlotEnd = new Date(potentialSlotStart.getTime() + appointmentDurationMs);
 
-                        if (slotEnd > dayEnd) break;
-                    }
-                }
-            } else { // VAST mode
-                if (previousAppointment) {
-                    const earliestStart = new Date(previousAppointment.end.getTime() + travelTimeToMs);
-                    if (earliestStart > slotStart) {
-                        currentTime = roundToNext15Minutes(earliestStart);
-                        continue;
-                    }
-                }
+            if (potentialSlotEnd > dayEnd) {
+                break;
             }
 
-            let totalBlockEnd = new Date(slotEnd.getTime() + bufferMs);
-
-            if (nextAppointment) {
-                try {
-                    const travelFromSeconds = await getTravelTime(destinationAddress, nextAppointment.location);
-                    const travelTimeFromMs = travelFromSeconds * 1000;
-                    const latestEnd = new Date(nextAppointment.start.getTime() - travelTimeFromMs);
-                    if (slotEnd > latestEnd) {
-                        currentTime.setUTCMinutes(currentTime.getUTCMinutes() + 15);
-                        continue;
-                    }
-                } catch (error) {
-                    console.error('Error getting travel time:', error);
-                    currentTime.setUTCMinutes(currentTime.getUTCMinutes() + 15);
-                    continue;
-                }
-            } else if (workdayMode === 'FLEXIBEL' && includeTravelEnd) {
-                try {
-                    const travelHomeSeconds = await getTravelTime(destinationAddress, startAddress);
-                    const travelHomeMs = travelHomeSeconds * 1000;
-                    const latestEnd = new Date(dayEnd.getTime() - travelHomeMs);
-                    if (slotEnd > latestEnd) {
-                        currentTime.setUTCMinutes(currentTime.getUTCMinutes() + 15);
-                        continue;
-                    }
-                } catch (error) {
-                    console.error('Error getting travel time home:', error);
-                }
-            }
-
-            let hasConflict = false;
+            let isClashing = false;
             for (const busy of todayBusySlots) {
-                if (hasOverlap(
-                    slotStart.getTime(),
-                    totalBlockEnd.getTime(),
-                    busy.start.getTime(),
-                    busy.end.getTime()
-                )) {
-                    hasConflict = true;
-                    currentTime = roundToNext15Minutes(busy.end);
+                if (potentialSlotStart < busy.end && potentialSlotEnd > busy.start) {
+                    isClashing = true;
+                    cursor = roundToNext15Minutes(new Date(busy.end.getTime() + bufferMs));
                     break;
                 }
             }
 
-            if (!hasConflict) {
-                availableSlots.push({
-                    start: slotStart,
-                    end: slotEnd
-                });
-
-                currentTime = new Date(slotStart.getTime());
-                currentTime.setUTCMinutes(currentTime.getUTCMinutes() + 15);
+            if (!isClashing) {
+                availableSlots.push({ start: potentialSlotStart, end: potentialSlotEnd });
+                cursor = new Date(potentialSlotStart.getTime() + 15 * 60000);
             }
         }
     }
-    return availableSlots.sort((a, b) => a.start.getTime() - b.start.getTime());
+    
+    const uniqueSlots = Array.from(new Map(availableSlots.map(slot => [slot.start.toISOString(), slot])).values());
+    return uniqueSlots.sort((a, b) => a.start.getTime() - b.start.getTime());
 }

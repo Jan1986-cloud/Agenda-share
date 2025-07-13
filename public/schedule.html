@@ -161,7 +161,8 @@
                     hour: '2-digit',
                     minute: '2-digit',
                 });
-
+                
+                // Sla de originele UTC-string op voor data-integriteit
                 slotsByDay.get(dayKey).push({ local: localTime, utc: slot.start });
             });
 
@@ -180,13 +181,14 @@
             document.querySelectorAll('#day-picker .btn').forEach(b => b.classList.remove('btn-primary', 'active'));
             document.querySelector(`#day-picker .btn[data-day-key="${dayKey}"]`).classList.add('btn-primary', 'active');
 
-            if (times && times.length > 0) {
+            if (times.length > 0) {
                 times.forEach(time => {
                     const btn = document.createElement('button');
                     btn.className = 'btn btn-outline-primary';
-                    btn.textContent = time.local;
+                    btn.textContent = time.local; // Toon lokale tijd
                     btn.onclick = () => {
-                        selectedDate = new Date(time.utc);
+                        // Gebruik de originele UTC-string voor de boeking
+                        selectedDate = new Date(time.utc); 
                         selectedTime = time.local;
                         document.querySelectorAll('#time-picker .btn').forEach(b => b.classList.remove('btn-primary', 'active'));
                         btn.classList.add('btn-primary', 'active');

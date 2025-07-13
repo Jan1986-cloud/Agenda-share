@@ -102,7 +102,7 @@
                         </div>
                     </div>
                     <hr class="my-4" />
-                    <h6 class="mb-3">Wekelijkse beschikbaarheid</h6>
+                    <h6 class="mb-3">Wekelijkse beschikbaarheid (Uw lokale tijd)</h6>
                     <div id="availability-schedule"></div>
                     <div class="d-flex justify-content-end align-items-center mt-4">
                         <button type="button" class="btn btn-secondary me-2" id="clear-form-btn" style="display: none;">Annuleren</button>
@@ -253,20 +253,35 @@
             e.preventDefault();
             const linkId = document.getElementById('linkId').value;
             const availability = [];
+
+            // *** DE FIX: Converteer lokale invoertijd naar UTC string ***
             for (let i = 0; i < 7; i++) {
-                const startTime = document.getElementById(`start-time-${i}`).value;
-                const endTime = document.getElementById(`end-time-${i}`).value;
-                if (startTime && endTime) {
-                    availability.push({ dayOfWeek: i, startTime, endTime });
+                const startTimeLocal = document.getElementById(`start-time-${i}`).value;
+                const endTimeLocal = document.getElementById(`end-time-${i}`).value;
+
+                if (startTimeLocal && endTimeLocal) {
+                    const toUTCTime = (timeString) => {
+                        const [hours, minutes] = timeString.split(':').map(Number);
+                        const tempDate = new Date();
+                        tempDate.setHours(hours, minutes, 0, 0); // Zet tijd lokaal
+                        return tempDate.getUTCHours().toString().padStart(2, '0') + ':' + tempDate.getUTCMinutes().toString().padStart(2, '0');
+                    };
+                    
+                    availability.push({ 
+                        dayOfWeek: i, 
+                        startTime: toUTCTime(startTimeLocal), 
+                        endTime: toUTCTime(endTimeLocal)
+                    });
                 }
             }
+            
             const data = {
                 title: document.getElementById('title').value,
-                description: document.getElementById('description').value, // Correct meegestuurd
+                description: document.getElementById('description').value,
                 duration: document.getElementById('duration').value,
                 buffer: document.getElementById('buffer').value,
                 startAddress: document.getElementById('startAddress').value,
-                availability,
+                availability, // Nu met correcte UTC tijden
                 calendarId: document.getElementById('calendarId').value,
                 maxTravelTime: document.getElementById('maxTravelTime').value || null,
                 workdayMode: document.querySelector('input[name="workdayMode"]:checked').value,

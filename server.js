@@ -278,47 +278,63 @@ app.get('/get-availability', async (req, res) => {
   try {
     const { rows: [link] } =
       await pool.query('SELECT * FROM links WHERE id = $1', [linkId]);
-    if (link && typeof link.availability === 'string') { link.availability = JSON.parse(link.availability); }
+    
     if (!link) return res.status(404).json({ error: 'linkId not found' });
+    
+    // Essentiële PARSE stap
+    if (typeof link.availability === 'string') { 
+      link.availability = JSON.parse(link.availability); 
+    }
 
     const { rows: [user] } =
       await pool.query('SELECT * FROM users WHERE id = $1', [link.user_id]);
     if (!user) return res.status(404).json({ error: 'user not found' });
 
-    // geauthenticeerde OAuth2-client per gebruiker
     const auth = await getAuthenticatedClient(link.user_id);
     const calendar = google.calendar({ version: 'v3', auth });
 
-    // ── Busy events ophalen, maar vangen bij token-fout
     let busySlots = [];
     try {
       const now  = new Date();
       const resp = await calendar.events.list({
         calendarId : link.calendar_id || 'primary',
-        timeMin    : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString(),
-        timeMax    : new Date(now.getFullYear(), now.getMonth(), now.getDate() + 8).toISOString(),
+        timeMin    : new Date().toISOString(),
+        timeMax    : new Date(now.setDate(now.getDate() + 8)).toISOString(),
         singleEvents: true,
         orderBy     : 'startTime',
       });
       busySlots = (resp.data.items || [])
         .filter(e => e.start?.dateTime && e.transparency !== 'transparent' && e.status === 'confirmed')
-        .map(e => ({ start: new Date(e.start.dateTime), end: new Date(e.end.dateTime) }));
+        .map(e => ({ start: new Date(e.start.dateTime), end: new Date(e.end.dateTime), location: e.location }));
     } catch (err) {
       console.warn('Calendar fetch failed → busySlots=[]', err.message);
     }
 
-    // ── Beschikbaarheid berekenen
-    const opts = { link, busySlots, destinationAddress, getTravelTime };
-    const slots = await calculateAvailability(opts);
-    console.log('SLOT sample', slots[0]);          // debug in Railway-logs
+    // Correct en volledig 'options' object
+    const options = {
+      availabilityRules: link.availability,
+      appointmentDuration: link.duration,
+      buffer: link.buffer,
+      startAddress: link.start_address,
+      destinationAddress,
+      maxTravelTime: link.max_travel_time,
+      workdayMode: link.workday_mode,
+      includeTravelStart: link.include_travel_start,
+      includeTravelEnd: link.include_travel_end,
+      busySlots,
+      getTravelTime,
+    };
+
+    const slots = await calculateAvailability(options);
+    
     res.json({
       title: link.title,
-      slots,
       description: link.description,
-      creatorEmail: user.email
+      creatorEmail: user.email,
+      slots: slots.map(s => ({ start: s.start.toISOString(), end: s.end.toISOString() })),
     });
   } catch (err) {
-    console.error('Error get-availability', err);
+    console.error('Error in /get-availability:', err);
     res.status(500).send('Fout bij ophalen van beschikbaarheid.');
   }
 });
