@@ -11,16 +11,11 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:keys": "node tools/test-keys.js"
   },
-  "jest": {
-    "transform": {}
-  },
   "author": "PV Monteur",
   "license": "ISC",
   "dependencies": {
-    "@google-cloud/local-auth": "^3.0.1",
     "body-parser": "^2.2.0",
     "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
     "date-fns": "2.30.0",
     "date-fns-tz": "2.0.1",
     "dotenv": "^17.2.0",

@@ -364,8 +364,8 @@ app.post('/book-appointment', async (req, res) => {
 
 const startServer = async () => {
   try {
-    // await testConnection();
-    // await createTables();
+  await testConnection();
+  await createTables();
     // console.log('Database tables checked/created successfully.');
     
     const requiredVars = [

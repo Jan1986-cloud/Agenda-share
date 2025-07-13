@@ -58,13 +58,27 @@
                     appointments.forEach(app => {
                         const row = tableBody.insertRow();
                         const appointmentDate = new Date(app.appointment_time);
-                        row.innerHTML = `
-                            <td>${appointmentDate.toLocaleString('nl-NL', { dateStyle: 'long', timeStyle: 'short' })}</td>
-                            <td>${app.name}</td>
-                            <td><a href="mailto:${app.email}">${app.email}</a></td>
-                            <td><a href="tel:${app.phone}">${app.phone}</a></td>
-                            <td>${app.destination_address}</td>
-                        `;
+                        // Datum & Tijd
+                        const tdDate = row.insertCell();
+                        tdDate.textContent = appointmentDate.toLocaleString('nl-NL', { dateStyle: 'long', timeStyle: 'short' });
+                        // Naam
+                        const tdName = row.insertCell();
+                        tdName.textContent = app.name;
+                        // E-mail
+                        const tdEmail = row.insertCell();
+                        const aEmail = document.createElement('a');
+                        aEmail.setAttribute('href', `mailto:${app.email}`);
+                        aEmail.textContent = app.email;
+                        tdEmail.appendChild(aEmail);
+                        // Telefoon
+                        const tdPhone = row.insertCell();
+                        const aPhone = document.createElement('a');
+                        aPhone.setAttribute('href', `tel:${app.phone}`);
+                        aPhone.textContent = app.phone;
+                        tdPhone.appendChild(aPhone);
+                        // Adres
+                        const tdAddr = row.insertCell();
+                        tdAddr.textContent = app.destination_address;
                     });
                 }
             } catch (error) {
