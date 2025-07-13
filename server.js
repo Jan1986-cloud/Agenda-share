@@ -278,6 +278,7 @@ app.get('/get-availability', async (req, res) => {
   try {
     const { rows: [link] } =
       await pool.query('SELECT * FROM links WHERE id = $1', [linkId]);
+    if (link && typeof link.availability === 'string') { link.availability = JSON.parse(link.availability); }
     if (!link) return res.status(404).json({ error: 'linkId not found' });
 
     const { rows: [user] } =
