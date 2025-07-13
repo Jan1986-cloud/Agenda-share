@@ -176,15 +176,15 @@ app.get('/api/calendars', async (req, res) => {
 // POST a new link
 app.post('/api/links', async (req, res) => {
   if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
-  const { title, duration, buffer, availability, startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd } = req.body;
+  const { title, description, duration, buffer, availability, startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd } = req.body;
   if (!title || !duration || !availability || !Array.isArray(availability) || !startAddress || !calendarId) {
     return res.status(400).send('Ongeldige invoer.');
   }
   try {
     const linkId = uuidv4();
     await pool.query(
-      'INSERT INTO links (id, user_id, title, duration, buffer, availability, start_address, calendar_id, max_travel_time, workday_mode, include_travel_start, include_travel_end) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)',
-      [linkId, req.session.userId, title, parseInt(duration, 10), parseInt(buffer, 10) || 0, JSON.stringify(availability), startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd]
+      'INSERT INTO links (id, user_id, title, description, duration, buffer, availability, start_address, calendar_id, max_travel_time, workday_mode, include_travel_start, include_travel_end) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)',
+      [linkId, req.session.userId, title, description, parseInt(duration, 10), parseInt(buffer, 10) || 0, JSON.stringify(availability), startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd]
     );
     res.status(201).json({ linkId });
   } catch (error) {
@@ -197,14 +197,14 @@ app.post('/api/links', async (req, res) => {
 app.put('/api/links/:id', async (req, res) => {
     if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
     const { id } = req.params;
-    const { title, duration, buffer, availability, startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd } = req.body;
+    const { title, description, duration, buffer, availability, startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd } = req.body;
     if (!title || !duration || !availability || !Array.isArray(availability) || !startAddress || !calendarId) {
         return res.status(400).send('Ongeldige invoer.');
     }
     try {
         const { rowCount } = await pool.query(
-            'UPDATE links SET title = $1, duration = $2, buffer = $3, availability = $4, start_address = $5, calendar_id = $6, max_travel_time = $7, workday_mode = $8, include_travel_start = $9, include_travel_end = $10 WHERE id = $11 AND user_id = $12',
-            [title, parseInt(duration, 10), parseInt(buffer, 10) || 0, JSON.stringify(availability), startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd, id, req.session.userId]
+            'UPDATE links SET title = $1, description = $2, duration = $3, buffer = $4, availability = $5, start_address = $6, calendar_id = $7, max_travel_time = $8, workday_mode = $9, include_travel_start = $10, include_travel_end = $11 WHERE id = $12 AND user_id = $13',
+            [title, description, parseInt(duration, 10), parseInt(buffer, 10) || 0, JSON.stringify(availability), startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd, id, req.session.userId]
         );
         if (rowCount === 0) {
             return res.status(404).send('Link niet gevonden of geen toestemming.');

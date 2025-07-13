@@ -7,17 +7,36 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
-        body { background-color: #f8f9fa; }
-        .container { max-width: 960px; }
-        .card { border-radius: 0.75rem; }
-        .availability-grid { display: grid; grid-template-columns: 120px 1fr 1fr; align-items: center; gap: 1rem; }
-        .link-item { transition: background-color 0.2s ease-in-out; }
-        .link-item:hover { background-color: #f1f3f5; }
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 960px;
+        }
+
+        .card {
+            border-radius: 0.75rem;
+        }
+
+        .availability-grid {
+            display: grid;
+            grid-template-columns: 120px 1fr 1fr;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .link-item {
+            transition: background-color 0.2s ease-in-out;
+        }
+
+            .link-item:hover {
+                background-color: #f1f3f5;
+            }
     </style>
 </head>
 <body>
     <div class="container my-5">
-        <!-- Main Form for Creating/Editing Links -->
         <div class="card shadow-sm mb-5">
             <div class="card-body p-4 p-md-5">
                 <h1 class="h2 mb-4" id="form-title">Nieuwe Link Aanmaken</h1>
@@ -27,7 +46,10 @@
                         <label for="title" class="form-label">Titel van de afspraak</label>
                         <input type="text" class="form-control" id="title" placeholder="Bijv. Kennismakingsgesprek" required />
                     </div>
-                    <div class="mb-3"><label for="description" class="form-label">Omschrijving</label><textarea class="form-control" id="description" rows="3"></textarea></div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Omschrijving</label>
+                        <textarea class="form-control" id="description" rows="3" placeholder="Voeg hier een korte omschrijving toe voor de afspraak..."></textarea>
+                    </div>
                     <div class="mb-3">
                         <label for="startAddress" class="form-label">Uw vaste vertrekadres</label>
                         <input type="text" class="form-control" id="startAddress" placeholder="Begin met typen..." required />
@@ -83,14 +105,13 @@
                     <h6 class="mb-3">Wekelijkse beschikbaarheid</h6>
                     <div id="availability-schedule"></div>
                     <div class="d-flex justify-content-end align-items-center mt-4">
-                         <button type="button" class="btn btn-secondary me-2" id="clear-form-btn" style="display: none;">Annuleren</button>
+                        <button type="button" class="btn btn-secondary me-2" id="clear-form-btn" style="display: none;">Annuleren</button>
                         <button type="submit" class="btn btn-primary" id="save-link-btn">Link Opslaan</button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- List of Existing Links -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2 class="h3">Mijn Bestaande Links</h2>
         </div>
@@ -117,10 +138,10 @@
                 const startTime = rule.startTime || (index >= 1 && index <= 5 ? '09:00' : '');
                 const endTime = rule.endTime || (index >= 1 && index <= 5 ? '17:00' : '');
                 html += `
-                    <label>${day}</label>
-                    <input type="time" class="form-control" id="start-time-${index}" value="${startTime}" />
-                    <input type="time" class="form-control" id="end-time-${index}" value="${endTime}" />
-                `;
+                        <label>${day}</label>
+                        <input type="time" class="form-control" id="start-time-${index}" value="${startTime}" />
+                        <input type="time" class="form-control" id="end-time-${index}" value="${endTime}" />
+                    `;
             });
             html += '</div>';
             container.innerHTML = html;
@@ -160,25 +181,31 @@
 
         async function loadLinks() {
             const list = document.getElementById('links-list');
+            list.innerHTML = ''; // Leegmaken voor herladen
             try {
                 const response = await fetch('/api/links');
                 if (!response.ok) throw new Error('Kon links niet laden.');
                 const links = await response.json();
-                list.innerHTML = '';
+
                 if (links.length === 0) {
-                    list.innerHTML = '<li class="list-group-item p-4 text-center text-muted">U heeft nog geen links aangemaakt.</li>';
+                    const item = document.createElement('li');
+                    item.className = 'list-group-item p-4 text-center text-muted';
+                    item.textContent = 'U heeft nog geen links aangemaakt.';
+                    list.appendChild(item);
                     return;
                 }
+
                 links.forEach(link => {
                     const item = document.createElement('li');
                     item.className = 'list-group-item d-flex justify-content-between align-items-center p-3 link-item';
                     const shareUrl = `${window.location.origin}/schedule.html?linkId=${link.id}`;
-                    // Link title en share-URL
+
                     const leftDiv = document.createElement('div');
                     const titleEl = document.createElement('h6');
                     titleEl.className = 'mb-0';
                     titleEl.textContent = link.title;
                     leftDiv.appendChild(titleEl);
+
                     const shareEl = document.createElement('a');
                     shareEl.href = shareUrl;
                     shareEl.target = '_blank';
@@ -186,24 +213,26 @@
                     shareEl.textContent = shareUrl;
                     leftDiv.appendChild(shareEl);
 
-                    // Actieknoppen
                     const rightDiv = document.createElement('div');
                     rightDiv.className = 'd-flex align-items-center';
+
                     const copyBtn = document.createElement('button');
                     copyBtn.className = 'btn btn-primary copy-btn me-2';
-                    copyBtn.setAttribute('data-share-url', shareUrl);
+                    copyBtn.dataset.shareUrl = shareUrl;
                     copyBtn.title = 'Kopieer link';
                     copyBtn.innerHTML = '<i class="bi bi-clipboard"></i> Kopieer';
                     rightDiv.appendChild(copyBtn);
+
                     const editBtn = document.createElement('button');
                     editBtn.className = 'btn btn-sm btn-outline-secondary edit-btn me-2';
-                    editBtn.setAttribute('data-link-id', link.id);
+                    editBtn.dataset.linkId = link.id;
                     editBtn.title = 'Bewerk';
                     editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
                     rightDiv.appendChild(editBtn);
+
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'btn btn-sm btn-outline-danger delete-btn';
-                    deleteBtn.setAttribute('data-link-id', link.id);
+                    deleteBtn.dataset.linkId = link.id;
                     deleteBtn.title = 'Verwijder';
                     deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
                     rightDiv.appendChild(deleteBtn);
@@ -213,7 +242,10 @@
                     list.appendChild(item);
                 });
             } catch (error) {
-                list.innerHTML = `<li class="list-group-item p-4 text-center text-danger">${error.message}</li>`;
+                const item = document.createElement('li');
+                item.className = 'list-group-item p-4 text-center text-danger';
+                item.textContent = error.message;
+                list.appendChild(item);
             }
         }
 
@@ -230,7 +262,7 @@
             }
             const data = {
                 title: document.getElementById('title').value,
-                description: document.getElementById('description').value,
+                description: document.getElementById('description').value, // Correct meegestuurd
                 duration: document.getElementById('duration').value,
                 buffer: document.getElementById('buffer').value,
                 startAddress: document.getElementById('startAddress').value,
@@ -258,7 +290,7 @@
                 alert(error.message);
             }
         });
-        
+
         document.getElementById('links-list').addEventListener('click', async (e) => {
             const editBtn = e.target.closest('.edit-btn');
             const deleteBtn = e.target.closest('.delete-btn');
@@ -287,11 +319,11 @@
                 const response = await fetch('/api/links');
                 const links = await response.json();
                 const link = links.find(l => l.id === linkId);
-                
+
                 document.getElementById('form-title').textContent = 'Link Bewerken';
                 document.getElementById('linkId').value = link.id;
                 document.getElementById('title').value = link.title;
-                document.getElementById('description').value = link.description;
+                document.getElementById('description').value = link.description || '';
                 document.getElementById('duration').value = link.duration;
                 document.getElementById('buffer').value = link.buffer;
                 document.getElementById('startAddress').value = link.start_address;
@@ -308,7 +340,7 @@
                 }
 
                 renderAvailabilitySchedule(link.availability);
-                
+
                 document.getElementById('clear-form-btn').style.display = 'inline-block';
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
@@ -330,14 +362,14 @@
         document.getElementById('clear-form-btn').addEventListener('click', resetForm);
 
         document.querySelectorAll('input[name="workdayMode"]').forEach(elem => {
-            elem.addEventListener('change', function(event) {
+            elem.addEventListener('change', function (event) {
                 document.getElementById('flexible-options').style.display = event.target.value === 'FLEXIBEL' ? 'flex' : 'none';
             });
         });
 
         function initAutocomplete() {
             const addressInput = document.getElementById('startAddress');
-            if (addressInput && !autocomplete) { // Only init if it doesn't exist
+            if (addressInput && !autocomplete) {
                 autocomplete = new google.maps.places.Autocomplete(addressInput, {
                     types: ['address'],
                     componentRestrictions: { country: 'nl' },
@@ -358,7 +390,7 @@
                     return;
                 }
                 window.initMap = initAutocomplete;
-                
+
                 const script = document.createElement('script');
                 script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&libraries=places&callback=initMap&loading=async`;
                 script.async = true;
@@ -368,7 +400,7 @@
                 console.error('Error loading Google Maps:', error);
             }
         }
-        
+
         document.addEventListener('DOMContentLoaded', () => {
             loadLinks();
             loadCalendars();

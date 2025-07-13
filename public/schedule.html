@@ -1,322 +1,310 @@
 <!doctype html>
 <html lang="nl">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Plan een afspraak</title>
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet" />
     <style>
-      body {
-        background-color: #f8f9fa;
-      }
-      .container {
-        max-width: 700px;
-      }
-      .card {
-        border-radius: 0.75rem;
-      }
-      .slot-picker {
-        height: 300px;
-        overflow-y: auto;
-        border: 1px solid #dee2e6;
-        border-radius: 0.5rem;
-        padding: 0.5rem;
-      }
-      .slot-picker .btn {
-        width: 100%;
-        margin-bottom: 0.5rem;
-      }
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 700px;
+        }
+
+        .card {
+            border-radius: 0.75rem;
+        }
+
+        .slot-picker {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+        }
+
+            .slot-picker .btn {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div class="container mt-5">
-      <div class="card shadow-sm">
-        <div class="card-body p-5">
-          <!-- View 1: Address Input -->
-          <div id="address-view">
-            <h1 id="appointment-title-main" class="card-title text-center mb-4">
-              Plan uw afspraak
-            </h1>
-            <p id="appointment-description" class="text-center"></p>
-            <p id="appointment-creator" class="text-center text-muted small"></p>
-            <p class="text-center text-muted mb-4">
-              Voer uw adres in om de reistijd te berekenen en beschikbare tijden
-              te zien.
-            </p>
-            <div class="mb-3">
-              <label for="destinationAddress" class="form-label fs-5"
-                >Uw afspraakadres</label
-              >
-              <input
-                type="text"
-                class="form-control form-control-lg"
-                id="destinationAddress"
-                placeholder="Begin met typen..."
-                required
-              />
-            </div>
-            <div class="d-grid">
-              <button
-                id="check-availability-btn"
-                class="btn btn-primary btn-lg"
-              >
-                Toon beschikbare tijden
-              </button>
-            </div>
-          </div>
-
-          <!-- View 2: Loading -->
-          <div id="loading-view" style="display: none" class="text-center">
-            <div class="spinner-border" role="status">
-              <span class="visually-hidden">Laden...</span>
-            </div>
-            <p class="mt-3">Beschikbaarheid wordt berekend...</p>
-          </div>
-
-          <!-- View 3: Booking -->
-          <div id="booking-view" style="display: none">
-            <h2 id="appointment-title-booking" class="text-center mb-4"></h2>
-            <p class="text-center text-muted mb-4">
-              Kies een dag en een tijdstip.
-            </p>
-            <div class="row">
-              <div class="col-md-6">
-                <h3 class="fs-5 text-center mb-3">Kies een dag</h3>
-                <div id="day-picker" class="slot-picker">
-                  <!-- Day buttons will be injected here -->
+        <div class="card shadow-sm">
+            <div class="card-body p-5">
+                <div id="address-view">
+                    <h1 id="appointment-title-main" class="card-title text-center mb-4">
+                        Plan uw afspraak
+                    </h1>
+                    <p id="appointment-description" class="text-center"></p>
+                    <p id="appointment-creator" class="text-center text-muted small"></p>
+                    <p class="text-center text-muted mb-4">
+                        Voer uw adres in om de reistijd te berekenen en beschikbare tijden
+                        te zien.
+                    </p>
+                    <div class="mb-3">
+                        <label for="destinationAddress" class="form-label fs-5">Uw afspraakadres</label>
+                        <input type="text"
+                               class="form-control form-control-lg"
+                               id="destinationAddress"
+                               placeholder="Begin met typen..."
+                               required />
+                    </div>
+                    <div class="d-grid">
+                        <button id="check-availability-btn"
+                                class="btn btn-primary btn-lg">
+                            Toon beschikbare tijden
+                        </button>
+                    </div>
                 </div>
-              </div>
-              <div class="col-md-6">
-                <h3 class="fs-5 text-center mb-3">Kies een tijd</h3>
-                <div id="time-picker" class="slot-picker">
-                  <!-- Time buttons will be injected here -->
+
+                <div id="loading-view" style="display: none" class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Laden...</span>
+                    </div>
+                    <p class="mt-3">Beschikbaarheid wordt berekend...</p>
                 </div>
-              </div>
+
+                <div id="booking-view" style="display: none">
+                    <h2 id="appointment-title-booking" class="text-center mb-4"></h2>
+                    <p class="text-center text-muted mb-4">
+                        Kies een dag en een tijdstip.
+                    </p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h3 class="fs-5 text-center mb-3">Kies een dag</h3>
+                            <div id="day-picker" class="slot-picker">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h3 class="fs-5 text-center mb-3">Kies een tijd</h3>
+                            <div id="time-picker" class="slot-picker">
+                            </div>
+                        </div>
+                    </div>
+                    <form id="booking-form" style="display: none" class="mt-4">
+                        <h3 class="fs-5 mb-3">Bevestig uw gegevens</h3>
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Uw naam</label>
+                            <input type="text" id="name" class="form-control" required />
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Uw e-mailadres</label>
+                            <input type="email" id="email" class="form-control" required />
+                        </div>
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Uw telefoonnummer</label>
+                            <input type="tel" id="phone" class="form-control" required />
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                Afspraak bevestigen
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="confirmation-view" style="display: none" class="text-center">
+                    <h2 class="text-success mb-3">Afspraak bevestigd!</h2>
+                    <p>
+                        U ontvangt een bevestiging per e-mail met de details van uw
+                        afspraak.
+                    </p>
+                </div>
+
+                <div id="error-view" style="display: none" class="text-center">
+                    <h2 class="text-danger mb-3">Er is iets misgegaan</h2>
+                    <p id="error-message"></p>
+                    <button class="btn btn-primary" onclick="location.reload()">
+                        Probeer opnieuw
+                    </button>
+                </div>
             </div>
-            <form id="booking-form" style="display: none" class="mt-4">
-              <h3 class="fs-5 mb-3">Bevestig uw gegevens</h3>
-              <div class="mb-3">
-                <label for="name" class="form-label">Uw naam</label>
-                <input type="text" id="name" class="form-control" required />
-              </div>
-              <div class="mb-3">
-                <label for="email" class="form-label">Uw e-mailadres</label>
-                <input type="email" id="email" class="form-control" required />
-              </div>
-              <div class="mb-3">
-                <label for="phone" class="form-label">Uw telefoonnummer</label>
-                <input type="tel" id="phone" class="form-control" required />
-              </div>
-              <div class="d-grid">
-                <button type="submit" class="btn btn-success btn-lg">
-                  Afspraak bevestigen
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <!-- View 4: Confirmation -->
-          <div id="confirmation-view" style="display: none" class="text-center">
-            <h2 class="text-success mb-3">Afspraak bevestigd!</h2>
-            <p>
-              U ontvangt een bevestiging per e-mail met de details van uw
-              afspraak.
-            </p>
-          </div>
-
-          <!-- View 5: Error -->
-          <div id="error-view" style="display: none" class="text-center">
-            <h2 class="text-danger mb-3">Er is iets misgegaan</h2>
-            <p id="error-message"></p>
-            <button class="btn btn-primary" onclick="location.reload()">
-              Probeer opnieuw
-            </button>
-          </div>
         </div>
-      </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-      const params = new URLSearchParams(window.location.search);
-      const linkId = params.get('linkId');
-      let selectedDate = null;
-      let selectedTime = null;
-      let finalSlotsByDay = new Map();
+        const params = new URLSearchParams(window.location.search);
+        const linkId = params.get('linkId');
+        let selectedDate = null;
+        let selectedTime = null;
+        let finalSlotsByDay = new Map();
 
-      function switchView(viewId) {
-        ['address-view', 'loading-view', 'booking-view', 'confirmation-view', 'error-view'].forEach(id => {
-          document.getElementById(id).style.display = id === viewId ? 'block' : 'none';
-        });
-      }
+        function switchView(viewId) {
+            ['address-view', 'loading-view', 'booking-view', 'confirmation-view', 'error-view'].forEach(id => {
+                document.getElementById(id).style.display = id === viewId ? 'block' : 'none';
+            });
+        }
 
-      function showError(message) {
-        document.getElementById('error-message').textContent = message;
-        switchView('error-view');
-      }
+        function showError(message) {
+            document.getElementById('error-message').textContent = message;
+            switchView('error-view');
+        }
 
         function groupSlotsByDay(rawSlots) {
-          const slotsByDay = new Map();
-          rawSlots.forEach(slot => {
-              const dt = new Date(slot.start);
-              const dayKey = dt.toISOString().split('T')[0];
+            const slotsByDay = new Map();
+            rawSlots.forEach(slot => {
+                const dt = new Date(slot.start);
+                const dayKey = dt.toISOString().split('T')[0];
 
-              if (!slotsByDay.has(dayKey)) {
-                  slotsByDay.set(dayKey, []);
-              }
+                if (!slotsByDay.has(dayKey)) {
+                    slotsByDay.set(dayKey, []);
+                }
 
-              const localTime = dt.toLocaleTimeString('nl-NL', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-              });
-              
-              slotsByDay.get(dayKey).push({ local: localTime, utc: slot.start });
-          });
-          
-          // Sorteer de tijden per dag
-          for (const dayKey of slotsByDay.keys()) {
-              slotsByDay.get(dayKey).sort((a, b) => a.local.localeCompare(b.local));
-          }
+                const localTime = dt.toLocaleTimeString('nl-NL', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                });
 
-          return slotsByDay;
-      }
+                slotsByDay.get(dayKey).push({ local: localTime, utc: slot.start });
+            });
 
-      function displayTimes(dayKey) {
-          const timePicker = document.getElementById('time-picker');
-          timePicker.innerHTML = '';
-          const times = finalSlotsByDay.get(dayKey) || [];
-          
-          document.querySelectorAll('#day-picker .btn').forEach(b => b.classList.remove('btn-primary', 'active'));
-          document.querySelector(`#day-picker .btn[data-day-key="${dayKey}"]`).classList.add('btn-primary', 'active');
+            for (const dayKey of slotsByDay.keys()) {
+                slotsByDay.get(dayKey).sort((a, b) => a.local.localeCompare(b.local));
+            }
 
-          if (times && times.length > 0) {
-              times.forEach(time => {
-                  const btn = document.createElement('button');
-                  btn.className = 'btn btn-outline-primary';
-                  btn.textContent = time.local;
-                  btn.onclick = () => {
-                      selectedDate = new Date(time.utc);
-                      selectedTime = time.local;
-                      document.querySelectorAll('#time-picker .btn').forEach(b => b.classList.remove('btn-primary', 'active'));
-                      btn.classList.add('btn-primary', 'active');
-                      document.getElementById('booking-form').style.display = 'block';
-                  };
-                  timePicker.appendChild(btn);
-              });
-          } else {
-              timePicker.innerHTML = '<p class="text-center text-muted">Geen tijden beschikbaar op deze dag.</p>';
-          }
-      }
-
-      document.getElementById('check-availability-btn').addEventListener('click', async () => {
-        const destinationAddress = document.getElementById('destinationAddress').value;
-        if (!destinationAddress) {
-          alert('Voer een adres in.');
-          return;
+            return slotsByDay;
         }
-        switchView('loading-view');
-        try {
-          const response = await fetch(`/get-availability?linkId=${linkId}&destinationAddress=${encodeURIComponent(destinationAddress)}`);
-          if (!response.ok) throw new Error('Kon beschikbaarheid niet ophalen.');
-          
-          const data = await response.json();
-          document.getElementById('appointment-title-main').textContent = data.title;
-          document.getElementById('appointment-title-booking').textContent = data.title;
-          document.getElementById('appointment-description').textContent = data.description;
-          document.getElementById('appointment-creator').textContent = `Aangeboden door: ${data.creatorEmail}`;
-          
-          finalSlotsByDay = groupSlotsByDay(data.slots);
-          const dayPicker = document.getElementById('day-picker');
-          dayPicker.innerHTML = '';
 
-          if (finalSlotsByDay.size === 0) {
-              showError('Geen beschikbare dagen gevonden in de komende periode.');
-              return;
-          }
+        function displayTimes(dayKey) {
+            const timePicker = document.getElementById('time-picker');
+            timePicker.innerHTML = '';
+            const times = finalSlotsByDay.get(dayKey) || [];
 
-          Array.from(finalSlotsByDay.keys()).sort().forEach(dayKey => {
-              const btn = document.createElement('button');
-              btn.className = 'btn btn-outline-primary';
-              const date = new Date(dayKey);
-              btn.textContent = date.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
-              btn.dataset.dayKey = dayKey;
-              btn.onclick = () => displayTimes(dayKey);
-              dayPicker.appendChild(btn);
-          });
+            document.querySelectorAll('#day-picker .btn').forEach(b => b.classList.remove('btn-primary', 'active'));
+            document.querySelector(`#day-picker .btn[data-day-key="${dayKey}"]`).classList.add('btn-primary', 'active');
 
-          switchView('booking-view');
-          // Automatically display times for the first available day
-          displayTimes(Array.from(finalSlotsByDay.keys()).sort()[0]);
-
-        } catch (error) {
-          showError(error.message);
+            if (times && times.length > 0) {
+                times.forEach(time => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn btn-outline-primary';
+                    btn.textContent = time.local;
+                    btn.onclick = () => {
+                        selectedDate = new Date(time.utc);
+                        selectedTime = time.local;
+                        document.querySelectorAll('#time-picker .btn').forEach(b => b.classList.remove('btn-primary', 'active'));
+                        btn.classList.add('btn-primary', 'active');
+                        document.getElementById('booking-form').style.display = 'block';
+                    };
+                    timePicker.appendChild(btn);
+                });
+            } else {
+                timePicker.innerHTML = '<p class="text-center text-muted">Geen tijden beschikbaar op deze dag.</p>';
+            }
         }
-      });
 
-      document.getElementById('booking-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = document.getElementById('name').value;
-        const email = document.getElementById('email').value;
-        const phone = document.getElementById('phone').value;
-        const destinationAddress = document.getElementById('destinationAddress').value;
+        document.getElementById('check-availability-btn').addEventListener('click', async () => {
+            const destinationAddress = document.getElementById('destinationAddress').value;
+            if (!destinationAddress) {
+                alert('Voer een adres in.');
+                return;
+            }
+            switchView('loading-view');
+            try {
+                const response = await fetch(`/get-availability?linkId=${linkId}&destinationAddress=${encodeURIComponent(destinationAddress)}`);
+                if (!response.ok) throw new Error('Kon beschikbaarheid niet ophalen.');
 
-        try {
-          const response = await fetch('/book-appointment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ linkId, startTime: selectedDate.toISOString(), name, email, destinationAddress, phone }),
-          });
-          if (!response.ok) throw new Error('Kon de afspraak niet boeken.');
-          switchView('confirmation-view');
-        } catch (error) {
-          showError(error.message);
-        }
-      });
+                const data = await response.json();
+                document.getElementById('appointment-title-main').textContent = data.title;
+                document.getElementById('appointment-title-booking').textContent = data.title;
+                document.getElementById('appointment-description').textContent = data.description;
+                document.getElementById('appointment-creator').textContent = `Aangeboden door: ${data.creatorEmail}`;
 
-      // --- Google Maps Autocomplete ---
-      let autocomplete;
-      async function initMap() {
-        const { Autocomplete } = await google.maps.importLibrary('places');
-        const input = document.getElementById('destinationAddress');
-        autocomplete = new Autocomplete(input, {
-          types: ['address'],
-          componentRestrictions: { country: 'nl' },
+                finalSlotsByDay = groupSlotsByDay(data.slots);
+                const dayPicker = document.getElementById('day-picker');
+                dayPicker.innerHTML = '';
+
+                if (finalSlotsByDay.size === 0) {
+                    showError('Geen beschikbare dagen gevonden in de komende periode.');
+                    return;
+                }
+
+                Array.from(finalSlotsByDay.keys()).sort().forEach(dayKey => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn btn-outline-primary';
+                    const [year, month, day] = dayKey.split('-').map(Number);
+                    const date = new Date(Date.UTC(year, month - 1, day));
+                    btn.textContent = date.toLocaleDateString('nl-NL', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' });
+                    btn.dataset.dayKey = dayKey;
+                    btn.onclick = () => displayTimes(dayKey);
+                    dayPicker.appendChild(btn);
+                });
+
+                switchView('booking-view');
+                displayTimes(Array.from(finalSlotsByDay.keys()).sort()[0]);
+
+            } catch (error) {
+                showError(error.message);
+            }
         });
-      }
 
-      // --- Dynamic Script Loading ---
-      async function loadGoogleMapsScript() {
-        if (!linkId) {
-          showError('Ongeldige of ontbrekende link-ID.');
-          return;
+        document.getElementById('booking-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const destinationAddress = document.getElementById('destinationAddress').value;
+
+            try {
+                const response = await fetch('/book-appointment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ linkId, startTime: selectedDate.toISOString(), name, email, destinationAddress, phone }),
+                });
+                if (!response.ok) throw new Error('Kon de afspraak niet boeken.');
+                switchView('confirmation-view');
+            } catch (error) {
+                showError(error.message);
+            }
+        });
+
+        // --- Google Maps Autocomplete ---
+        let autocomplete;
+        async function initMap() {
+            const { Autocomplete } = await google.maps.importLibrary('places');
+            const input = document.getElementById('destinationAddress');
+            autocomplete = new Autocomplete(input, {
+                types: ['address'],
+                componentRestrictions: { country: 'nl' },
+            });
         }
-        try {
-          const response = await fetch('/api/config');
-          if (!response.ok) throw new Error('Kon configuratie niet laden.');
-          const config = await response.json();
-          const apiKey = config.mapsApiKey;
 
-          if (!apiKey) {
-            console.error('Google Maps API Key is missing.');
-            return;
-          }
+        // --- Dynamic Script Loading ---
+        async function loadGoogleMapsScript() {
+            if (!linkId) {
+                showError('Ongeldige of ontbrekende link-ID.');
+                return;
+            }
+            try {
+                const response = await fetch('/api/config');
+                if (!response.ok) throw new Error('Kon configuratie niet laden.');
+                const config = await response.json();
+                const apiKey = config.mapsApiKey;
 
-          const script = document.createElement('script');
-          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap&loading=async`;
-          script.async = true;
-          script.defer = true;
-          document.head.appendChild(script);
-        } catch (error) {
-          showError('Fout bij het laden van de kaartfunctionaliteit.');
-          console.error('Error loading Google Maps:', error);
+                if (!apiKey) {
+                    console.error('Google Maps API Key is missing.');
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap&loading=async`;
+                script.async = true;
+                script.defer = true;
+                document.head.appendChild(script);
+            } catch (error) {
+                showError('Fout bij het laden van de kaartfunctionaliteit.');
+                console.error('Error loading Google Maps:', error);
+            }
         }
-      }
 
-      window.initMap = initMap;
-      document.addEventListener('DOMContentLoaded', loadGoogleMapsScript);
+        window.initMap = initMap;
+        document.addEventListener('DOMContentLoaded', loadGoogleMapsScript);
     </script>
-  </body>
+</body>
 </html>
