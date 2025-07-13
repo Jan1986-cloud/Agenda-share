@@ -4,7 +4,7 @@ import { calculateAvailability } from './availability-logic.js';
 import { getTravelTime } from './utils/travel-time.js';
 import pg from 'pg';
 const { Pool } = pg;
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+const pool = new Pool({ connectionString: process.env.DATABASE_PUBLIC_URL, ssl: { rejectUnauthorized: false } });
 
 async function runLiveTest() {
     // --- CONFIGURATIE: Pas deze waarden aan ---
