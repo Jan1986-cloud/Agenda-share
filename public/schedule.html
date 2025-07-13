@@ -159,7 +159,7 @@
       function processSlots(rawSlots, durationMinutes) {
           const slotsByDay = new Map();
           rawSlots.forEach(slot => {
-              const startDate = new Date(slot.start);
+              const startDate = new Date(slot.start_utc);
               const dayString = startDate.toISOString().split('T')[0];
               if (!slotsByDay.has(dayString)) {
                   slotsByDay.set(dayString, []);
@@ -197,7 +197,9 @@
                   }
                   
                   if (isAvailable) {
-                      thirtyMinSlots.add(currentTime.toTimeString().substring(0, 5));
+                      const hh = String(currentTime.getUTCHours()).padStart(2, '0');
+                      const mm = String(currentTime.getUTCMinutes()).padStart(2, '0');
+                      thirtyMinSlots.add(`${hh}:${mm}`);
                   }
                   
                   // Move to the next 30-minute interval
@@ -225,7 +227,9 @@
                   btn.className = 'btn btn-outline-primary';
                   btn.textContent = time;
                   btn.onclick = () => {
-                      selectedDate = new Date(dayKey + 'T' + time);
+                      const [y, m, d] = dayKey.split('-').map(Number);
+                      const [hh, mm] = time.split(':').map(Number);
+                      selectedDate = new Date(Date.UTC(y, m - 1, d, hh, mm));
                       selectedTime = time;
                       document.querySelectorAll('#time-picker .btn').forEach(b => b.classList.remove('btn-primary', 'active'));
                       btn.classList.add('btn-primary', 'active');
