@@ -37,3 +37,50 @@ Stel, er is een afspraak van 11:00 tot 11:30. Het volgende lege slot is om 11:45
 *   `12:00` -> Grenst aan het rode slot -> **ORANJE**
 *   `12:15` -> Grenst aan het oranje slot -> **GEEL**
 *   `12:30` -> Grenst aan het gele slot -> **GEEL** (Geel is de "veiligste" kleur in dit scenario, dus de rimpel stopt hier).
+
+---
+
+### **Analyse van de Applicatie-Functie**
+
+**1. Fundamenteel Probleem**
+
+De applicatie is ontworpen om een fundamenteel en tijdrovend probleem op te lossen voor professionals die op locatie werken: het inplannen van afspraken met klanten. Het traditionele proces van heen-en-weer bellen of mailen om een geschikt tijdstip te vinden is inefficiënt, foutgevoelig en houdt geen rekening met een cruciale, variabele factor: de reistijd tussen afspraken.
+
+**2. Doelgroep**
+
+De primaire doelgroep is elke professional of dienstverlener die meerdere klanten op verschillende locaties bezoekt. Een perfect voorbeeld is een `pvmonteur.nl`: een monteur die van klant A naar klant B reist. De app is echter even nuttig voor adviseurs, vertegenwoordigers, of therapeuten die huisbezoeken afleggen.
+
+**3. Kernfunctionaliteit: Een Geautomatiseerde & Intelligente Planning-Assistent**
+
+De app functioneert als een persoonlijke planning-assistent die de complexiteit van het plannen automatiseert. Dit wordt bereikt via de volgende kernfuncties:
+
+*   **A. Creatie van Deelbare Planningslinks:**
+    *   De professional (de "linkdeler") creëert een unieke, gepersonaliseerde weblink. Deze link is de toegangspoort voor klanten om een afspraak te boeken.
+
+*   **B. Configuratie van Beschikbaarheidsregels:**
+    *   Aan elke link zijn regels gekoppeld die de beschikbaarheid van de professional definiëren:
+        *   **Agenda-integratie:** De app koppelt met de Google Agenda van de professional en behandelt bestaande afspraken als "bezet".
+        *   **Tijdsblokken:** De professional stelt zijn algemene werkdagen en -uren in (bijv. ma-vr, 09:00-17:00).
+        *   **Afspraakparameters:** De duur van een standaardafspraak en de gewenste buffertijd tussen afspraken worden vastgelegd.
+        *   **Reistijd-instellingen:** De professional configureert zijn vaste vertrekadres en hoe de reistijd aan het begin en einde van de dag moet worden behandeld.
+
+*   **C. Dynamische & Contextuele Slotberekening:**
+    *   Wanneer een klant (de "linkgebruiker") de link opent en zijn adres invoert, voert de app zijn kerntaak uit: het berekent *real-time* de beschikbare tijdslots.
+    *   Dit is geen statische lijst, maar een dynamisch resultaat gebaseerd op:
+        1.  De vaste regels van de link (werkuren, duur).
+        2.  De *actuele* bezette tijden uit de Google Agenda.
+        3.  De *berekende reistijd* van de laatst bekende locatie van de professional naar het adres van de klant.
+
+*   **D. Risico-visualisatie (De Kleurenlogica):**
+    *   De app erkent dat reistijdberekeningen kunnen mislukken. In plaats van te falen, communiceert het systeem het risico visueel aan de klant via het groen/geel/oranje/rood-systeem. Dit stelt de klant in staat een geïnformeerde keuze te maken, zelfs bij onvolledige data.
+
+*   **E. Geautomatiseerde Boeking:**
+    *   Zodra de klant een tijdslot kiest en zijn gegevens invult, maakt de app automatisch een afspraak aan in de Google Agenda van de professional en stuurt een uitnodiging naar de klant.
+
+**4. Eindresultaat & Waarde**
+
+De applicatie transformeert een handmatig, complex proces in een geautomatiseerde, intelligente handeling. De waarde voor de gebruiker is:
+*   **Efficiëntie:** Drastische vermindering van de tijd besteed aan het plannen van afspraken.
+*   **Optimalisatie:** Voorkomt dubbele boekingen en onrealistische planningen door reistijd mee te nemen.
+*   **Professionaliteit:** Biedt klanten een soepele, moderne en duidelijke manier om een afspraak te maken.
+*   **Risicobeheer:** Maakt de onvermijdelijke onzekerheid van reistijden beheersbaar en transparant.

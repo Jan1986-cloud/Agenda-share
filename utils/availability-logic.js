@@ -14,9 +14,7 @@ export async function calculateAvailability(options) {
     const roundToNext15Minutes = (date) => {
         const d = new Date(date);
         const minutes = d.getUTCMinutes();
-        if (minutes % 15 !== 0) {
-            d.setUTCMinutes(minutes + (15 - (minutes % 15)), 0, 0);
-        }
+        if (minutes % 15 !== 0) d.setUTCMinutes(minutes + (15 - (minutes % 15)), 0, 0);
         return d;
     };
 
@@ -91,7 +89,7 @@ export async function calculateAvailability(options) {
                     ? nextAppointmentAfter.start.getTime() - (potentialEnd.getTime() + bufferMs)
                     : Infinity;
                 
-                const totalMarginMs = timeBeforeMs === Infinity || timeAfterMs === Infinity ? 3600001 : timeBeforeMs + timeAfterMs;
+                const totalMarginMs = Math.min(timeBeforeMs, timeAfterMs);
 
                 let certainty;
                 if (totalMarginMs >= 3600000) certainty = 'yellow';
