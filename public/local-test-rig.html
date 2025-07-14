@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lokale Test-Omgeving (v2)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body class="bg-light">
+    <div class="container my-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h1 class="h3">Diagnostische Test Resultaten</h1>
+                <p class="text-muted">Geïsoleerde test van de `availability-logic.js` met gesimuleerde data.</p>
+                <hr>
+                <div id="diagnostics"></div>
+                <div id="results"></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- DE VOLLEDIGE LOGICA IS NU DIRECT IN DIT BESTAND GEÏMPLEMENTEERD ---
+
+        async function calculateAvailability(options) {
+            // ... [De volledige, 140+ regels lange, correcte 'calculateAvailability' functie komt hier] ...
+            // ... [Deze code is identiek aan de vorige versie die ik u gaf] ...
+            const {
+                availabilityRules, busySlots = [], appointmentDuration, buffer,
+                startAddress, destinationAddress, maxTravelTime, getTravelTime,
+            } = options;
+            const appointmentDurationMs = appointmentDuration * 60000;
+            const bufferMs = buffer * 60000;
+            const now = new Date();
+            const roundToNext15Minutes = (date) => {
+                const d = new Date(date);
+                const minutes = d.getUTCMinutes();
+                if (minutes % 15 !== 0) d.setUTCMinutes(minutes + (15 - (minutes % 15)), 0, 0);
+                return d;
+            };
+            const allBusySlotsSorted = busySlots.map(s => ({ ...s, start: new Date(s.start), end: new Date(s.end), location: s.location || startAddress })).sort((a, b) => a.start.getTime() - b.start.getTime());
+            const finalSlots = [];
+            for (let d = 0; d <= 7; d++) {
+                const currentDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + d));
+                const dayOfWeek = currentDay.getUTCDay();
+                const rule = availabilityRules.find(r => r.dayOfWeek === dayOfWeek);
+                if (!rule) continue;
+                const [startHour, startMinute] = rule.startTime.split(':').map(Number);
+                const [endHour, endMinute] = rule.endTime.split(':').map(Number);
+                const dayStart = new Date(Date.UTC(currentDay.getUTCFullYear(), currentDay.getUTCMonth(), currentDay.getUTCDate(), startHour, startMinute));
+                const dayEnd = new Date(Date.UTC(currentDay.getUTCFullYear(), currentDay.getUTCMonth(), currentDay.getUTCDate(), endHour, endMinute));
+                let cursor = roundToNext15Minutes(new Date(Math.max(now.getTime(), dayStart.getTime())));
+                while (cursor.getTime() < dayEnd.getTime()) {
+                    const potentialStart = new Date(cursor.getTime());
+                    const lastAppointmentBefore = allBusySlotsSorted.filter(s => s.end.getTime() <= potentialStart.getTime()).pop();
+                    const nextAppointmentAfter = allBusySlotsSorted.find(s => s.start.getTime() >= potentialStart.getTime());
+                    if (nextAppointmentAfter && potentialStart.getTime() + appointmentDurationMs > nextAppointmentAfter.start.getTime()) {
+                        cursor = roundToNext15Minutes(new Date(nextAppointmentAfter.end.getTime() + bufferMs));
+                        continue;
+                    }
+                    const potentialEnd = new Date(potentialStart.getTime() + appointmentDurationMs);
+                    if (potentialEnd > dayEnd) break;
+                    const origin = lastAppointmentBefore ? (lastAppointmentBefore.location || startAddress) : startAddress;
+                    const destinationForNextTrip = nextAppointmentAfter ? (nextAppointmentAfter.location || startAddress) : startAddress;
+                    const travelToResult = await getTravelTime(origin, destinationAddress);
+                    const travelFromResult = await getTravelTime(destinationAddress, destinationForNextTrip);
+                    const travelIsKnown = travelToResult.status === 'OK' && travelFromResult.status === 'OK';
+                    if (travelIsKnown) {
+                        const travelToMs = travelToResult.duration * 1000;
+                        const travelFromMs = travelFromResult.duration * 1000;
+                        const earliestPossibleStart = lastAppointmentBefore ? (lastAppointmentBefore.end.getTime() + bufferMs) : dayStart.getTime();
+                        const latestPossibleEnd = nextAppointmentAfter ? (nextAppointmentAfter.start.getTime() - bufferMs) : dayEnd.getTime();
+                        const requiredStartTime = earliestPossibleStart + travelToMs;
+                        const requiredEndTime = potentialEnd.getTime() + travelFromMs;
+                        if (potentialStart.getTime() >= requiredStartTime && requiredEndTime <= latestPossibleEnd) {
+                            finalSlots.push({ start: potentialStart, end: potentialEnd, certainty: 'green' });
+                        }
+                    } else {
+                        const timeBeforeMs = lastAppointmentBefore ? potentialStart.getTime() - (lastAppointmentBefore.end.getTime() + bufferMs) : Infinity;
+                        const timeAfterMs = nextAppointmentAfter ? nextAppointmentAfter.start.getTime() - (potentialEnd.getTime() + bufferMs) : Infinity;
+                        const totalMarginMs = Math.min(timeBeforeMs, timeAfterMs);
+                        let certainty;
+                        if (totalMarginMs >= 3600000) certainty = 'yellow';
+                        else if (totalMarginMs >= 1800000) certainty = 'orange';
+                        else certainty = 'red';
+                        finalSlots.push({ start: potentialStart, end: potentialEnd, certainty });
+                    }
+                    cursor.setUTCMinutes(cursor.getUTCMinutes() + 15);
+                }
+            }
+            return finalSlots;
+        }
+
+        // --- De Test-Uitvoerder ---
+        async function runTests() {
+            const resultsContainer = document.getElementById('results');
+            const diagnosticsContainer = document.getElementById('diagnostics');
+            resultsContainer.innerHTML = '';
+            diagnosticsContainer.innerHTML = '';
+
+            const mockAvailabilityRules = [{ dayOfWeek: 1, startTime: '07:00', endTime: '15:00' }];
+            const mockBusySlots = [{ start: Date.UTC(2025, 6, 14, 10, 45, 0), end: Date.UTC(2025, 6, 14, 11, 45, 0), location: 'Veenendaal' }];
+            const certaintyInfo = {
+                green:  { class: 'btn-success', text: 'GROEN: Reistijd berekend.' },
+                yellow: { class: 'btn-warning text-dark', text: 'GEEL: Adres onbekend, >1u marge.' },
+                orange: { class: 'btn-warning', text: 'ORANJE: API fout, 30-60m marge.' },
+                red:    { class: 'btn-danger',  text: 'ROOD: Adres onbekend, <30m marge.' },
+            };
+
+            const testScenarios = [
+                { name: "Geldig Adres, Amsterdam", dest: "Amsterdam", getTravelTime: async () => ({ status: 'OK', duration: 1500 }) },
+                { name: "Onbekend Adres", dest: "Onbekend Adres", getTravelTime: async () => ({ status: 'ZERO_RESULTS', duration: null }) },
+                { name: "API Fout Adres", dest: "API Fout Adres", getTravelTime: async () => ({ status: 'API_ERROR', duration: null }) },
+            ];
+
+            try {
+                for (const scenario of testScenarios) {
+                    const testDiv = document.createElement('div');
+                    testDiv.className = 'mb-4 p-3 border rounded';
+                    testDiv.innerHTML = `<h5>Test voor bestemming: <strong>${scenario.name}</strong></h5>`;
+                    resultsContainer.appendChild(testDiv);
+
+                    const options = {
+                        availabilityRules: mockAvailabilityRules,
+                        busySlots: mockBusySlots,
+                        appointmentDuration: 30, buffer: 15,
+                        startAddress: 'Hoofdlocatie, Veenendaal',
+                        destinationAddress: scenario.dest,
+                        maxTravelTime: 120,
+                        getTravelTime: scenario.getTravelTime,
+                    };
+                    
+                    const slots = await calculateAvailability(options);
+
+                    if (slots.length === 0) {
+                        testDiv.innerHTML += '<p>Geen slots gevonden.</p>';
+                    } else {
+                        slots.forEach(slot => {
+                            const btn = document.createElement('button');
+                            const certainty = certaintyInfo[slot.certainty];
+                            btn.className = `btn m-1 ${certainty.class}`;
+                            btn.textContent = `${new Date(slot.start).toLocaleTimeString('nl-NL', {timeZone: 'Europe/Amsterdam', hour: '2-digit', minute: '2-digit'})}`;
+                            btn.title = certainty.text;
+                            testDiv.appendChild(btn);
+                        });
+                    }
+                }
+            } catch (error) {
+                diagnosticsContainer.innerHTML = `<div class="alert alert-danger"><h4>Fout tijdens uitvoeren van test</h4><pre>${error.stack}</pre></div>`;
+                console.error("Test gefaald:", error);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        runTests();
+    </script>
+</body>
+</html>

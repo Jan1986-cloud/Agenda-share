@@ -165,13 +165,30 @@
         function displayLegend() {
             const legendContainer = document.querySelector('#legend ul');
             legendContainer.innerHTML = ''; // Leegmaken voor het geval dat
+            
             // Gebruik een vaste volgorde voor de legenda
             ['green', 'yellow', 'orange', 'red'].forEach(key => {
                 const info = certaintyInfo[key];
+                if (!info) return;
+
                 const li = document.createElement('li');
-                li.className = 'mb-2 d-flex align-items-start';
-                // Gebruik de kleur uit de config voor het icoon
-                li.innerHTML = `<i class="bi ${info.icon} me-3" style="color: ${info.color}; font-size: 1.2rem;"></i> <div><small>${info.text}</small></div>`;
+                li.className = 'mb-2 d-flex align-items-center';
+                
+                // Maak een duidelijke gekleurde stip
+                const colorDot = document.createElement('span');
+                colorDot.style.height = '15px';
+                colorDot.style.width = '15px';
+                colorDot.style.backgroundColor = info.color;
+                colorDot.style.borderRadius = '50%';
+                colorDot.style.display = 'inline-block';
+                colorDot.style.marginRight = '10px';
+                colorDot.style.flexShrink = '0'; // Voorkom dat de stip krimpt
+
+                const textDiv = document.createElement('div');
+                textDiv.innerHTML = `<small>${info.text}</small>`;
+
+                li.appendChild(colorDot);
+                li.appendChild(textDiv);
                 legendContainer.appendChild(li);
             });
             document.getElementById('legend').style.display = 'block';
