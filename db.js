@@ -160,11 +160,23 @@ export const createTables = async () => {
             name VARCHAR(255) NOT NULL,
             email VARCHAR(255) NOT NULL,
             phone VARCHAR(255) NOT NULL,
+            comments TEXT,
             appointment_time TIMESTAMPTZ NOT NULL,
             destination_address TEXT NOT NULL,
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
     `);
+
+    // Migration: Add comments column to appointments table if it doesn't exist
+    const appointmentsCommentsColumn = await client.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name='appointments' AND column_name='comments'
+    `);
+    if (appointmentsCommentsColumn.rows.length === 0) {
+        await client.query('ALTER TABLE appointments ADD COLUMN comments TEXT');
+        console.log('Migrated appointments table: added comments column.');
+    }
 
     await client.query(`
         CREATE TABLE IF NOT EXISTS travel_time_cache (

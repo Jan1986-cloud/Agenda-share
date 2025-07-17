@@ -68,6 +68,30 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 3000;
 
+// --- Rate Limiter ---
+const apiLimiterStore = {};
+const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000; // 5 minuten
+const RATE_LIMIT_MAX_REQUESTS = 5;
+
+const apiLimiter = (req, res, next) => {
+    const ip = req.ip;
+    const now = Date.now();
+    
+    if (!apiLimiterStore[ip]) {
+        apiLimiterStore[ip] = [];
+    }
+
+    // Verwijder oude requests uit het window
+    apiLimiterStore[ip] = apiLimiterStore[ip].filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW_MS);
+
+    if (apiLimiterStore[ip].length >= RATE_LIMIT_MAX_REQUESTS) {
+        return res.status(429).send('Te veel aanvragen. Probeer het over 5 minuten opnieuw.');
+    }
+
+    apiLimiterStore[ip].push(now);
+    next();
+};
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static('public'));
@@ -228,7 +252,7 @@ app.get('/get-availability', async (req, res) => {
     if (!linkId) return res.status(400).send('Link ID is verplicht.');
 
     try {
-        const { rows: [link] } = await pool.query('SELECT * FROM links WHERE id = $1', [linkId]);
+        const { rows: [link] } = await pool.query('SELECT l.*, u.email FROM links l JOIN users u ON l.user_id = u.id WHERE l.id = $1', [linkId]);
         if (!link) return res.status(404).json({ error: 'linkId not found' });
         if (typeof link.availability === 'string') link.availability = JSON.parse(link.availability);
 
@@ -239,8 +263,7 @@ app.get('/get-availability', async (req, res) => {
         const timeMax = new Date(now.getTime() + (link.planning_offset_days + link.planning_window_days) * 24 * 60 * 60 * 1000);
         const busySlots = await getBusySlots(auth, link.calendar_id, timeMin, timeMax);
 
-        // We sturen de 'calculateAvailability' functie nu een 'dummy' getTravelTime, omdat we de reistijd hier niet berekenen.
-        const options = { ...link, busySlots, getTravelTime: () => Promise.resolve({ status: 'SKIPPED' }) };
+        const options = { ...link, busySlots };
         const { slots } = await calculateAvailability(options);
 
         const availableDays = Array.from({ length: link.planning_window_days }, (_, i) => {
@@ -252,6 +275,7 @@ app.get('/get-availability', async (req, res) => {
             title: link.title,
             description: link.description,
             duration: link.duration,
+            creatorEmail: link.email,
             initialSlots: slots.map(s => ({ 
                 start: s.start.toISOString(), 
                 end: s.end.toISOString(),
@@ -266,8 +290,17 @@ app.get('/get-availability', async (req, res) => {
     }
 });
 
+// Functie om alleen de plaatsnaam uit een adres te halen
+const getCityFromAddress = (address) => {
+    if (!address) return 'Onbekende locatie';
+    const parts = address.split(',');
+    // Pakt meestal het deel voor de postcode, wat vaak de stad is.
+    return parts.length > 1 ? parts[parts.length - 2].trim() : parts[0].trim();
+};
+
+
 // STAP 2: Endpoint om een specifiek slot te verifiëren EN het ripple-effect te berekenen.
-app.post('/verify-slot', async (req, res) => {
+app.post('/verify-slot', apiLimiter, async (req, res) => {
     const { linkId, destinationAddress, slotStart } = req.body;
     if (!linkId || !destinationAddress || !slotStart) {
         return res.status(400).send('Link ID, adres en starttijd van het slot zijn verplicht.');
@@ -307,6 +340,11 @@ app.post('/verify-slot', async (req, res) => {
         const travelToResult = await getTravelTime(originCoords, destCoords);
         const travelFromResult = await getTravelTime(destCoords, nextDestCoords);
 
+        travelToResult.originAddress = getCityFromAddress(originAddress);
+        travelToResult.destinationAddress = getCityFromAddress(destinationAddress);
+        travelFromResult.originAddress = getCityFromAddress(destinationAddress);
+        travelFromResult.destinationAddress = getCityFromAddress(destinationForNextTrip);
+
         const travelIsKnown = travelToResult.status === 'OK' && travelFromResult.status === 'OK';
         let isViable = false;
         let certainty = 'red';
@@ -330,7 +368,6 @@ app.post('/verify-slot', async (req, res) => {
                 certainty = 'green';
             }
         } else {
-            // Fallback-logica blijft hetzelfde
             const [startHour, startMinute] = rule.startTime.split(':').map(Number);
             const [endHour, endMinute] = rule.endTime.split(':').map(Number);
             const dayStart = new Date(Date.UTC(potentialStart.getUTCFullYear(), potentialStart.getUTCMonth(), potentialStart.getUTCDate(), startHour, startMinute));
@@ -364,7 +401,7 @@ app.post('/verify-slot', async (req, res) => {
 
 
 app.post('/book-appointment', async (req, res) => {
-    const { linkId, startTime, name, email, destinationAddress, phone } = req.body;
+    const { linkId, startTime, name, email, destinationAddress, phone, comments } = req.body;
     if (!linkId || !startTime || !name || !email || !destinationAddress || !phone) {
         return res.status(400).send('Alle velden zijn verplicht.');
     }
@@ -373,8 +410,8 @@ app.post('/book-appointment', async (req, res) => {
         if (!link) return res.status(404).send('Link niet gevonden.');
 
         await pool.query(
-            'INSERT INTO appointments (link_id, user_id, name, email, phone, appointment_time, destination_address) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-            [linkId, link.user_id, name, email, phone, startTime, destinationAddress]
+            'INSERT INTO appointments (link_id, user_id, name, email, phone, comments, appointment_time, destination_address) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+            [linkId, link.user_id, name, email, phone, comments, startTime, destinationAddress]
         );
 
         const auth = await getAuthenticatedClient(link.user_id);
@@ -382,9 +419,14 @@ app.post('/book-appointment', async (req, res) => {
         const appointmentStart = new Date(startTime);
         const appointmentEnd = new Date(appointmentStart.getTime() + link.duration * 60000);
 
+        let description = `Afspraak met ${name} (${phone}).`;
+        if (comments) {
+            description += `\n\nOpmerkingen: ${comments}`;
+        }
+
         const mainEvent = {
             summary: link.title,
-            description: `Afspraak met ${name} (${phone}).`,
+            description: description,
             location: destinationAddress,
             start: { dateTime: appointmentStart.toISOString(), timeZone: 'Europe/Amsterdam' },
             end: { dateTime: appointmentEnd.toISOString(), timeZone: 'Europe/Amsterdam' },
