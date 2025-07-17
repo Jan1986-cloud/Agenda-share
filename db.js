@@ -154,18 +154,27 @@ export const createTables = async () => {
 
     await client.query(`
         CREATE TABLE IF NOT EXISTS appointments (
-            id SERIAL PRIMARY KEY,
-            link_id VARCHAR(255) NOT NULL REFERENCES links(id) ON DELETE CASCADE,
-            user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            link_id UUID REFERENCES links(id) ON DELETE CASCADE,
+            user_id UUID REFERENCES users(id) ON DELETE CASCADE,
             name VARCHAR(255) NOT NULL,
             email VARCHAR(255) NOT NULL,
-            phone VARCHAR(255) NOT NULL,
+            phone VARCHAR(50),
             comments TEXT,
             appointment_time TIMESTAMPTZ NOT NULL,
-            destination_address TEXT NOT NULL,
-            created_at TIMESTAMPTZ DEFAULT NOW()
+            destination_address TEXT,
+            created_at TIMESTAMPTZ DEFAULT now()
         );
     `);
+
+    // Migration: Add google_event_id to appointments
+    const googleEventIdColumn = await client.query(`
+        SELECT column_name FROM information_schema.columns WHERE table_name='appointments' AND column_name='google_event_id'
+    `);
+    if (googleEventIdColumn.rows.length === 0) {
+        await client.query(`ALTER TABLE appointments ADD COLUMN google_event_id VARCHAR(255)`);
+        console.log('Migrated appointments table: added google_event_id column.');
+    }
 
     // Migration: Add comments column to appointments table if it doesn't exist
     const appointmentsCommentsColumn = await client.query(`

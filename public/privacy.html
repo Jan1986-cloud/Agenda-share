@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacybeleid</title>
+    <title data-i18n="privacy_page_title"></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         body { background-color: #f8f9fa; }
         .container { max-width: 800px; }
@@ -13,7 +14,7 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom mb-4">
         <div class="container">
-            <a class="navbar-brand" href="#" data-translate="Privacybeleid">Privacybeleid</a>
+            <a class="navbar-brand" href="#" data-i18n="privacy_page_title"></a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -21,13 +22,10 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-translate"></i> <span data-translate="Talen">Talen</span>
+                            <i class="bi bi-translate"></i> <span data-i18n="lang_selector_title"></span>
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="languageDropdown">
-                            <li><a class="dropdown-item" href="#nl" data-translate="Nederlands">Nederlands</a></li>
-                            <li><a class="dropdown-item" href="#en" data-translate="Engels">Engels</a></li>
-                            <li><a class="dropdown-item" href="#de" data-translate="Duits">Duits</a></li>
-                            <li><a class="dropdown-item" href="#fr" data-translate="Frans">Frans</a></li>
+                            <!-- Dynamically filled by i18n.js -->
                         </ul>
                     </li>
                 </ul>
@@ -37,45 +35,44 @@
     <div class="container my-5">
         <div class="card shadow-sm">
             <div class="card-body p-4 p-md-5">
-                <h1 class="h2 mb-4" data-translate="Privacybeleid">Privacybeleid</h1>
-                <p>Dit privacybeleid beschrijft hoe uw persoonlijke informatie wordt verzameld, gebruikt en gedeeld wanneer u onze applicatie gebruikt.</p>
+                <h1 class="h2 mb-4" data-i18n="privacy_page_title"></h1>
+                <p data-i18n="privacy_intro"></p>
 
-                <h2 class="h4 mt-5">Persoonlijke Informatie die we Verzamelen</h2>
-                <p>Wanneer u zich authenticeert met uw Google-account, ontvangen en slaan we de volgende informatie op:</p>
+                <h2 class="h4 mt-5" data-i18n="privacy_h_data_collected"></h2>
+                <p data-i18n="privacy_p_data_collected"></p>
                 <ul>
-                    <li><strong>Gebruikersinformatie:</strong> Uw e-mailadres, zoals verstrekt door Google.</li>
-                    <li><strong>Google Agenda-gegevens:</strong> We vragen om lees- en schrijftoegang tot uw Google Agenda om beschikbare tijdslots te vinden en nieuwe afspraken in te plannen. We lezen alleen de start- en eindtijden van evenementen om bezette tijden te bepalen. We maken nieuwe evenementen aan wanneer een afspraak wordt geboekt via een van uw links.</li>
-                    <li><strong>Tokens:</strong> We slaan de door Google verstrekte OAuth 2.0-tokens (access token en refresh token) veilig op om namens u toegang te krijgen tot uw agenda, zonder dat u telkens opnieuw hoeft in te loggen.</li>
+                    <li data-i18n="privacy_li_user_info"></li>
+                    <li data-i18n="privacy_li_calendar_data"></li>
+                    <li data-i18n="privacy_li_tokens"></li>
                 </ul>
 
-                <h2 class="h4 mt-5">Hoe We Uw Informatie Gebruiken</h2>
-                <p>We gebruiken de verzamelde informatie uitsluitend voor de volgende doeleinden:</p>
+                <h2 class="h4 mt-5" data-i18n="privacy_h_data_usage"></h2>
+                <p data-i18n="privacy_p_data_usage"></p>
                 <ul>
-                    <li>Om de kerndiensten van de applicatie te leveren: het berekenen van uw beschikbaarheid en het inplannen van afspraken in uw agenda.</li>
-                    <li>Om uw account te beheren en te authenticeren.</li>
-                    <li>Om de communicatie tussen u en de persoon die een afspraak boekt te faciliteren.</li>
+                    <li data-i18n="privacy_li_core_services"></li>
+                    <li data-i18n="privacy_li_account_management"></li>
+                    <li data-i18n="privacy_li_communication"></li>
                 </ul>
 
-                <h2 class="h4 mt-5">Delen van Uw Informatie</h2>
-                <p>Wij verkopen, verhuren of delen uw persoonlijke informatie niet met derden voor marketingdoeleinden.</p>
-                <p>Uw informatie wordt alleen gedeeld in de volgende context:</p>
+                <h2 class="h4 mt-5" data-i18n="privacy_h_data_sharing"></h2>
+                <p data-i18n="privacy_p_data_sharing_1"></p>
+                <p data-i18n="privacy_p_data_sharing_2"></p>
                 <ul>
-                    <li>Wanneer een afspraak wordt geboekt, wordt de titel van het evenement en de geselecteerde tijd gedeeld met de persoon die de afspraak maakt, via een agenda-uitnodiging.</li>
+                    <li data-i18n="privacy_li_booking_context"></li>
                 </ul>
 
-                <h2 class="h4 mt-5">Gegevensbeveiliging</h2>
-                <p>We nemen de beveiliging van uw gegevens serieus. Toegangstokens worden versleuteld opgeslagen en we passen redelijke veiligheidsmaatregelen toe om uw informatie te beschermen tegen ongeautoriseerde toegang.</p>
+                <h2 class="h4 mt-5" data-i18n="privacy_h_data_security"></h2>
+                <p data-i18n="privacy_p_data_security"></p>
                 
-                <h2 class="h4 mt-5">Uw Rechten</h2>
-                <p>U kunt op elk moment de toegang van onze applicatie tot uw Google-account intrekken via de <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">veiligheidsinstellingen van uw Google-account</a>. Als u de toegang intrekt, zullen we uw gegevens uit onze systemen verwijderen.</p>
+                <h2 class="h4 mt-5" data-i18n="privacy_h_your_rights"></h2>
+                <p data-i18n="privacy_p_your_rights"></p>
 
-                <h2 class="h4 mt-5">Contact</h2>
-                <p>Als u vragen heeft over dit privacybeleid, neem dan contact met ons op via <a href="mailto:jan@pvmonteur.nl">jan@pvmonteur.nl</a>.</p>
+                <h2 class="h4 mt-5" data-i18n="privacy_h_contact"></h2>
+                <p data-i18n="privacy_p_contact"></p>
             </div>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/dictionaries.js"></script>
-    <script src="js/main.js"></script>
+    <script src="js/i18n.js"></script>
 </body>
 </html>

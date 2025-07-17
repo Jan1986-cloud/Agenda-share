@@ -3,464 +3,207 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard - Planner</title>
+    <title data-i18n="page_title_dashboard"></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
-        body {
-            background-color: #f8f9fa;
-        }
-
-        .container {
-            max-width: 960px;
-        }
-
-        .card {
-            border-radius: 0.75rem;
-        }
-
-        .availability-grid {
-            display: grid;
-            grid-template-columns: 120px 1fr 1fr;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .link-item {
-            transition: background-color 0.2s ease-in-out;
-        }
-
-            .link-item:hover {
-                background-color: #f1f3f5;
-            }
+        .kpi-card .display-4 { font-weight: 600; }
+        .link-card { transition: transform 0.2s ease-in-out; }
+        .link-card:hover { transform: translateY(-5px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15)!important; }
     </style>
 </head>
-<body>
+<body class="bg-light">
     <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom mb-4">
         <div class="container">
-            <a class="navbar-brand" href="#" data-translate="Dashboard">Dashboard</a>
+            <a class="navbar-brand" href="/dashboard.html" data-i18n="page_title_dashboard"></a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/appointments.html" data-i18n="page_title_appointments"></a></li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-translate"></i> <span data-translate="Talen">Talen</span>
+                            <i class="bi bi-translate"></i> <span data-i18n="lang_selector_title"></span>
                         </a>
-                        <ul class="dropdown-menu" aria-labelledby="languageDropdown">
-                            <li><a class="dropdown-item" href="#nl" data-translate="Nederlands">Nederlands</a></li>
-                            <li><a class="dropdown-item" href="#en" data-translate="Engels">Engels</a></li>
-                            <li><a class="dropdown-item" href="#de" data-translate="Duits">Duits</a></li>
-                            <li><a class="dropdown-item" href="#fr" data-translate="Frans">Frans</a></li>
-                        </ul>
+                        <ul class="dropdown-menu" aria-labelledby="languageDropdown"></ul>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
+
     <div class="container my-5">
-        <div class="card shadow-sm mb-5">
-            <div class="card-body p-4 p-md-5">
-                <h1 class="h2 mb-4" id="form-title" data-translate="Nieuwe Link Aanmaken">Nieuwe Link Aanmaken</h1>
-                <form id="link-form">
-                    <input type="hidden" id="linkId" />
-                    <div class="mb-3">
-                        <label for="title" class="form-label" data-translate="Titel van de afspraak">Titel van de afspraak</label>
-                        <input type="text" class="form-control" id="title" placeholder="Bijv. Kennismakingsgesprek" data-translate-placeholder="Bijv. Kennismakingsgesprek" required />
-                    </div>
-                    <div class="mb-3">
-                        <label for="description" class="form-label" data-translate="Omschrijving">Omschrijving</label>
-                        <textarea class="form-control" id="description" rows="3" placeholder="Voeg hier een korte omschrijving toe voor de afspraak..." data-translate-placeholder="Voeg hier een korte omschrijving toe voor de afspraak..."></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="startAddress" class="form-label" data-translate="Uw vaste vertrekadres">Uw vaste vertrekadres</label>
-                        <input type="text" class="form-control" id="startAddress" placeholder="Begin met typen..." data-translate-placeholder="Begin met typen..." required />
-                    </div>
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label for="duration" class="form-label" data-translate="Duur (minuten)">Duur (minuten)</label>
-                            <input type="number" class="form-control" id="duration" value="30" required />
-                        </div>
-                        <div class="col-md-6">
-                            <label for="buffer" class="form-label" data-translate="Buffertijd (minuten)">Buffertijd (minuten)</label>
-                            <input type="number" class="form-control" id="buffer" value="15" placeholder="Tijd tussen afspraken" data-translate-placeholder="Tijd tussen afspraken" />
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="calendarId" class="form-label" data-translate="Agenda">Agenda</label>
-                        <select id="calendarId" class="form-select"></select>
-                    </div>
-                    <hr class="my-4" />
-                    <h6 class="mb-3" data-translate="Planning Instellingen">Planning Instellingen</h6>
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label for="planning_offset_days" class="form-label" data-translate="Start planning over (dagen)">Start planning over (dagen)</label>
-                            <input type="number" class="form-control" id="planning_offset_days" value="0" />
-                        </div>
-                        <div class="col-md-6">
-                            <label for="planning_window_days" class="form-label" data-translate="Toon beschikbaarheid voor (dagen)">Toon beschikbaarheid voor (dagen)</label>
-                            <input type="number" class="form-control" id="planning_window_days" value="14" />
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label for="maxTravelTime" class="form-label" data-translate="Maximale reistijd (minuten)">Maximale reistijd (minuten)</label>
-                            <input type="number" class="form-control" id="maxTravelTime" placeholder="Leeg voor geen limiet" data-translate-placeholder="Leeg voor geen limiet" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label" data-translate="Werkdag modus">Werkdag modus</label>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="workdayMode" id="workday-fixed" value="VAST" checked>
-                                <label class="form-check-label" for="workday-fixed" data-translate="Vaste kantooruren">Vaste kantooruren</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="workdayMode" id="workday-flexible" value="FLEXIBEL">
-                                <label class="form-check-label" for="workday-flexible" data-translate="Flexibel (o.b.v. afspraken)">Flexibel (o.b.v. afspraken)</label>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="flexible-options" class="row mt-3" style="display: none;">
-                        <div class="col-md-6">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" id="includeTravelStart" checked>
-                                <label class="form-check-label" for="includeTravelStart" data-translate="Reistijd naar 1e afspraak meerekenen">Reistijd naar 1e afspraak meerekenen</label>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" id="includeTravelEnd" checked>
-                                <label class="form-check-label" for="includeTravelEnd" data-translate="Reistijd vanaf laatste afspraak meerekenen">Reistijd vanaf laatste afspraak meerekenen</label>
-                            </div>
-                        </div>
-                    </div>
-                    <hr class="my-4" />
-                    <h6 class="mb-3" data-translate="Wekelijkse beschikbaarheid (Uw lokale tijd)">Wekelijkse beschikbaarheid (Uw lokale tijd)</h6>
-                    <div id="availability-schedule"></div>
-                    <div class="d-flex justify-content-end align-items-center mt-4">
-                        <button type="button" class="btn btn-secondary me-2" id="clear-form-btn" style="display: none;" data-translate="Annuleren">Annuleren</button>
-                        <button type="submit" class="btn btn-primary" id="save-link-btn" data-translate="Link Opslaan">Link Opslaan</button>
-                    </div>
-                </form>
+        <div id="dashboard-loading" class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
             </div>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="h3" data-translate="Mijn Bestaande Links">Mijn Bestaande Links</h2>
-        </div>
-        <div class="card shadow-sm">
-            <div class="card-body p-0">
-                <ul class="list-group list-group-flush" id="links-list">
-                    <li class="list-group-item p-4 text-center text-muted" id="loading-links" data-translate="Links worden geladen...">Links worden geladen...</li>
-                </ul>
+        <div id="dashboard-content" class="row gy-4" style="display: none;">
+            <!-- KPI Cards -->
+            <div class="col-md-6">
+                <div class="card text-center h-100 kpi-card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title text-muted" data-i18n="kpi_total_appointments"></h5>
+                        <p class="display-4" id="total-appointments"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card text-center h-100 kpi-card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title text-muted" data-i18n="kpi_time_saved"></h5>
+                        <p class="display-4" id="time-saved"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Links Card -->
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0" data-i18n="dashboard_links_title"></h5>
+                        <a href="/link-editor.html" class="btn btn-primary"><i class="bi bi-plus-lg"></i> <span data-i18n="form_title_new_link"></span></a>
+                    </div>
+                    <div class="card-body">
+                        <div class="row gy-3" id="links-container">
+                            <!-- Link mini-cards will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calendar Leaderboard Card -->
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="mb-0" data-i18n="dashboard_calendars_title"></h5>
+                    </div>
+                    <ul class="list-group list-group-flush" id="calendar-leaderboard">
+                        <!-- Calendar ranks will be inserted here -->
+                    </ul>
+                </div>
             </div>
         </div>
-        <footer class='text-center mt-5 p-4 text-muted border-top'><a href='/privacy.html' data-translate="Privacybeleid">Privacybeleid</a></footer>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/dictionaries.js"></script>
-    <script src="js/main.js"></script>
+    <script src="/js/i18n.js"></script>
     <script>
-        let mapsApiKey = null;
-        let autocomplete;
+        async function loadDashboard() {
+            const loadingEl = document.getElementById('dashboard-loading');
+            const contentEl = document.getElementById('dashboard-content');
 
-        function renderAvailabilitySchedule(availability = []) {
-            const container = document.getElementById('availability-schedule');
-            const days = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
-            let html = '<div class="availability-grid">';
-            days.forEach((day, index) => {
-                const rule = availability.find(r => r.dayOfWeek === index) || {};
-                const startTime = rule.startTime || (index >= 1 && index <= 5 ? '09:00' : '');
-                const endTime = rule.endTime || (index >= 1 && index <= 5 ? '17:00' : '');
-                html += `
-                        <label>${day}</label>
-                        <input type="time" class="form-control" id="start-time-${index}" value="${startTime}" />
-                        <input type="time" class="form-control" id="end-time-${index}" value="${endTime}" />
-                    `;
-            });
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
-        function resetForm() {
-            document.getElementById('form-title').textContent = 'Nieuwe Link Aanmaken';
-            document.getElementById('link-form').reset();
-            document.getElementById('linkId').value = '';
-            document.getElementById('clear-form-btn').style.display = 'none';
-            document.getElementById('workday-fixed').checked = true;
-            document.getElementById('flexible-options').style.display = 'none';
-            renderAvailabilitySchedule();
-        }
-
-        async function loadCalendars() {
-            const select = document.getElementById('calendarId');
             try {
-                const response = await fetch('/api/calendars');
-                if (!response.ok) throw new Error('Kon agenda\'s niet laden.');
-                const calendars = await response.json();
-                select.innerHTML = '';
-                calendars.forEach(calendar => {
-                    const option = document.createElement('option');
-                    option.value = calendar.id;
-                    option.textContent = calendar.summary;
-                    if (calendar.primary) {
-                        option.selected = true;
+                const response = await fetch('/api/dashboard/summary');
+                if (!response.ok) throw new Error('Failed to load dashboard data.');
+                const data = await response.json();
+
+                // KPI Cards
+                document.getElementById('total-appointments').textContent = data.totalAppointments;
+                const hours = Math.floor(data.timeSavedMinutes / 60);
+                const minutes = data.timeSavedMinutes % 60;
+                document.getElementById('time-saved').textContent = `${hours}h ${minutes}m`;
+
+                // Links Card
+                const linksContainer = document.getElementById('links-container');
+                linksContainer.innerHTML = '';
+                if (data.links.length > 0) {
+                    data.links.forEach(link => {
+                        const col = document.createElement('div');
+                        col.className = 'col-md-6 col-lg-4';
+                        const cardHtml = `
+                            <div class="card link-card shadow-sm h-100">
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <h6 class="card-title mb-0 me-2">${link.title}</h6>
+                                        <div class="d-flex flex-nowrap">
+                                            <button class="btn btn-sm btn-outline-secondary duplicate-btn" data-id="${link.id}" data-i18n-title="dashboard_button_duplicate"><i class="bi bi-copy"></i></button>
+                                            <a href="/link-editor.html?id=${link.id}" class="btn btn-sm btn-outline-secondary ms-2" data-i18n-title="dashboard_button_edit"><i class="bi bi-pencil"></i></a>
+                                            <button class="btn btn-sm btn-outline-primary ms-2 copy-btn" data-share-url="${window.location.origin}/schedule.html?linkId=${link.id}" data-i18n-title="dashboard_button_copy"><i class="bi bi-clipboard"></i></button>
+                                        </div>
+                                    </div>
+                                    <p class="card-text mt-auto pt-2">
+                                        <a href="/appointments.html?linkId=${link.id}" class="text-decoration-none">
+                                            <span class="badge bg-primary">${link.appointment_count}</span>
+                                            <span data-i18n="appointments_booked_suffix"></span>
+                                        </a>
+                                    </p>
+                                </div>
+                            </div>`;
+                        col.innerHTML = cardHtml;
+                        linksContainer.appendChild(col);
+                    });
+                } else {
+                    linksContainer.innerHTML = `<div class="col-12 text-center text-muted" data-i18n="dashboard_links_empty"></div>`;
+                }
+
+                // Add event listener for the new buttons
+                linksContainer.addEventListener('click', async (e) => {
+                    const copyBtn = e.target.closest('.copy-btn');
+                    const duplicateBtn = e.target.closest('.duplicate-btn');
+
+                    if (copyBtn) {
+                        const urlToCopy = copyBtn.dataset.shareUrl;
+                        navigator.clipboard.writeText(urlToCopy).then(() => {
+                            const originalIcon = '<i class="bi bi-clipboard"></i>';
+                            copyBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
+                            copyBtn.classList.remove('btn-outline-primary');
+                            copyBtn.classList.add('btn-success');
+                            setTimeout(() => {
+                                copyBtn.innerHTML = originalIcon;
+                                copyBtn.classList.remove('btn-success');
+                                copyBtn.classList.add('btn-outline-primary');
+                            }, 2000);
+                        }).catch(err => console.error('Failed to copy: ', err));
                     }
-                    select.appendChild(option);
+
+                    if (duplicateBtn) {
+                        const linkId = duplicateBtn.dataset.id;
+                        try {
+                            const response = await fetch(`/api/links/${linkId}/duplicate`, { method: 'POST' });
+                            if (!response.ok) throw new Error('Duplication failed');
+                            loadDashboard(); // Refresh the dashboard to show the new link
+                        } catch (err) {
+                            console.error('Error duplicating link:', err);
+                            alert('Could not duplicate the link.');
+                        }
+                    }
                 });
+
+                // Calendar Leaderboard
+                const calendarContainer = document.getElementById('calendar-leaderboard');
+                calendarContainer.innerHTML = '';
+                 if (data.calendars.length > 0) {
+                    data.calendars.forEach(cal => {
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                        li.innerHTML = `<span>${cal.calendar_id}</span><span class="badge bg-secondary rounded-pill">${cal.appointment_count}</span>`;
+                        calendarContainer.appendChild(li);
+                    });
+                } else {
+                    calendarContainer.innerHTML = `<li class="list-group-item text-center text-muted" data-i18n="dashboard_calendars_empty"></li>`;
+                }
+
+
             } catch (error) {
                 console.error(error);
-                select.innerHTML = '<option value="">Kon agenda\'s niet laden</option>';
-            }
-        }
-
-        async function loadLinks() {
-            const list = document.getElementById('links-list');
-            list.innerHTML = ''; // Leegmaken voor herladen
-            try {
-                const response = await fetch('/api/links');
-                if (!response.ok) throw new Error('Kon links niet laden.');
-                const links = await response.json();
-
-                if (links.length === 0) {
-                    const item = document.createElement('li');
-                    item.className = 'list-group-item p-4 text-center text-muted';
-                    item.textContent = 'U heeft nog geen links aangemaakt.';
-                    list.appendChild(item);
-                    return;
-                }
-
-                links.forEach(link => {
-                    const item = document.createElement('li');
-                    item.className = 'list-group-item d-flex justify-content-between align-items-center p-3 link-item';
-                    const shareUrl = `${window.location.origin}/schedule.html?linkId=${link.id}`;
-
-                    const leftDiv = document.createElement('div');
-                    const titleEl = document.createElement('h6');
-                    titleEl.className = 'mb-0';
-                    titleEl.textContent = link.title;
-                    leftDiv.appendChild(titleEl);
-
-                    const shareEl = document.createElement('a');
-                    shareEl.href = shareUrl;
-                    shareEl.target = '_blank';
-                    shareEl.className = 'text-muted small';
-                    shareEl.textContent = shareUrl;
-                    leftDiv.appendChild(shareEl);
-
-                    const rightDiv = document.createElement('div');
-                    rightDiv.className = 'd-flex align-items-center';
-
-                    const copyBtn = document.createElement('button');
-                    copyBtn.className = 'btn btn-primary copy-btn me-2';
-                    copyBtn.dataset.shareUrl = shareUrl;
-                    copyBtn.title = 'Kopieer link';
-                    copyBtn.innerHTML = '<i class="bi bi-clipboard"></i> Kopieer';
-                    rightDiv.appendChild(copyBtn);
-
-                    const editBtn = document.createElement('button');
-                    editBtn.className = 'btn btn-sm btn-outline-secondary edit-btn me-2';
-                    editBtn.dataset.linkId = link.id;
-                    editBtn.title = 'Bewerk';
-                    editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
-                    rightDiv.appendChild(editBtn);
-
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'btn btn-sm btn-outline-danger delete-btn';
-                    deleteBtn.dataset.linkId = link.id;
-                    deleteBtn.title = 'Verwijder';
-                    deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
-                    rightDiv.appendChild(deleteBtn);
-
-                    item.appendChild(leftDiv);
-                    item.appendChild(rightDiv);
-                    list.appendChild(item);
-                });
-            } catch (error) {
-                const item = document.createElement('li');
-                item.className = 'list-group-item p-4 text-center text-danger';
-                item.textContent = error.message;
-                list.appendChild(item);
-            }
-        }
-
-        document.getElementById('link-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const linkId = document.getElementById('linkId').value;
-            const availability = [];
-
-            // *** DE FIX: Converteer lokale invoertijd naar UTC string ***
-            for (let i = 0; i < 7; i++) {
-                const startTimeLocal = document.getElementById(`start-time-${i}`).value;
-                const endTimeLocal = document.getElementById(`end-time-${i}`).value;
-
-                if (startTimeLocal && endTimeLocal) {
-                    const toUTCTime = (timeString) => {
-                        const [hours, minutes] = timeString.split(':').map(Number);
-                        const tempDate = new Date();
-                        tempDate.setHours(hours, minutes, 0, 0); // Zet tijd lokaal
-                        return tempDate.getUTCHours().toString().padStart(2, '0') + ':' + tempDate.getUTCMinutes().toString().padStart(2, '0');
-                    };
-                    
-                    availability.push({ 
-                        dayOfWeek: i, 
-                        startTime: toUTCTime(startTimeLocal), 
-                        endTime: toUTCTime(endTimeLocal)
-                    });
-                }
-            }
-            
-            const data = {
-                title: document.getElementById('title').value,
-                description: document.getElementById('description').value,
-                duration: document.getElementById('duration').value,
-                buffer: document.getElementById('buffer').value,
-                startAddress: document.getElementById('startAddress').value,
-                availability, // Nu met correcte UTC tijden
-                calendarId: document.getElementById('calendarId').value,
-                maxTravelTime: document.getElementById('maxTravelTime').value || null,
-                workdayMode: document.querySelector('input[name="workdayMode"]:checked').value,
-                includeTravelStart: document.getElementById('includeTravelStart').checked,
-                includeTravelEnd: document.getElementById('includeTravelEnd').checked,
-                planning_offset_days: document.getElementById('planning_offset_days').value,
-                planning_window_days: document.getElementById('planning_window_days').value,
-            };
-
-            const url = linkId ? `/api/links/${linkId}` : '/api/links';
-            const method = linkId ? 'PUT' : 'POST';
-
-            try {
-                const response = await fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data),
-                });
-                if (!response.ok) throw new Error('Opslaan van link mislukt.');
-                resetForm();
-                loadLinks();
-            } catch (error) {
-                alert(error.message);
-            }
-        });
-
-        document.getElementById('links-list').addEventListener('click', async (e) => {
-            const editBtn = e.target.closest('.edit-btn');
-            const deleteBtn = e.target.closest('.delete-btn');
-            const copyBtn = e.target.closest('.copy-btn');
-
-            if (copyBtn) {
-                const urlToCopy = copyBtn.dataset.shareUrl;
-                navigator.clipboard.writeText(urlToCopy).then(() => {
-                    const originalText = copyBtn.innerHTML;
-                    copyBtn.innerHTML = '<i class="bi bi-check-lg"></i> Gekopieerd!';
-                    copyBtn.classList.remove('btn-primary');
-                    copyBtn.classList.add('btn-success');
-                    setTimeout(() => {
-                        copyBtn.innerHTML = originalText;
-                        copyBtn.classList.remove('btn-success');
-                        copyBtn.classList.add('btn-primary');
-                    }, 2000);
-                }).catch(err => {
-                    console.error('Failed to copy: ', err);
-                    alert('Kopiëren mislukt.');
-                });
-            }
-
-            if (editBtn) {
-                const linkId = editBtn.dataset.linkId;
-                const response = await fetch('/api/links');
-                const links = await response.json();
-                const link = links.find(l => l.id === linkId);
-
-                document.getElementById('form-title').textContent = 'Link Bewerken';
-                document.getElementById('linkId').value = link.id;
-                document.getElementById('title').value = link.title;
-                document.getElementById('description').value = link.description || '';
-                document.getElementById('duration').value = link.duration;
-                document.getElementById('buffer').value = link.buffer;
-                document.getElementById('startAddress').value = link.start_address;
-                document.getElementById('calendarId').value = link.calendar_id || 'primary';
-                document.getElementById('maxTravelTime').value = link.max_travel_time;
-                document.getElementById(`workday-${link.workday_mode?.toLowerCase() || 'fixed'}`).checked = true;
-                document.getElementById('includeTravelStart').checked = link.include_travel_start;
-                document.getElementById('includeTravelEnd').checked = link.include_travel_end;
-                document.getElementById('planning_offset_days').value = link.planning_offset_days || 0;
-                document.getElementById('planning_window_days').value = link.planning_window_days || 14;
-
-                if (document.getElementById('workday-flexible').checked) {
-                    document.getElementById('flexible-options').style.display = 'flex';
-                } else {
-                    document.getElementById('flexible-options').style.display = 'none';
-                }
-
-                renderAvailabilitySchedule(link.availability);
-
-                document.getElementById('clear-form-btn').style.display = 'inline-block';
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-
-            if (deleteBtn) {
-                const linkId = deleteBtn.dataset.linkId;
-                if (confirm('Weet u zeker dat u deze link wilt verwijderen?')) {
-                    try {
-                        const response = await fetch(`/api/links/${linkId}`, { method: 'DELETE' });
-                        if (!response.ok) throw new Error('Verwijderen mislukt.');
-                        loadLinks();
-                    } catch (error) {
-                        alert(error.message);
-                    }
-                }
-            }
-        });
-
-        document.getElementById('clear-form-btn').addEventListener('click', resetForm);
-
-        document.querySelectorAll('input[name="workdayMode"]').forEach(elem => {
-            elem.addEventListener('change', function (event) {
-                document.getElementById('flexible-options').style.display = event.target.value === 'FLEXIBEL' ? 'flex' : 'none';
-            });
-        });
-
-        function initAutocomplete() {
-            const addressInput = document.getElementById('startAddress');
-            if (addressInput && !autocomplete) {
-                autocomplete = new google.maps.places.Autocomplete(addressInput, {
-                    types: ['address'],
-                    componentRestrictions: { country: 'nl' },
-                });
-            }
-        }
-
-        async function loadGoogleMapsScript() {
-            try {
-                if (!mapsApiKey) {
-                    const response = await fetch('/api/config');
-                    if (!response.ok) throw new Error('Kon configuratie niet laden.');
-                    const config = await response.json();
-                    mapsApiKey = config.mapsApiKey;
-                }
-                if (!mapsApiKey) {
-                    console.error('Google Maps API Key is missing.');
-                    return;
-                }
-                window.initMap = initAutocomplete;
-
-                const script = document.createElement('script');
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${mapsApiKey}&libraries=places&callback=initMap&loading=async`;
-                script.async = true;
-                script.defer = true;
-                document.head.appendChild(script);
-            } catch (error) {
-                console.error('Error loading Google Maps:', error);
+                contentEl.innerHTML = `<div class="col-12"><div class="alert alert-danger">${error.message}</div></div>`;
+            } finally {
+                loadingEl.style.display = 'none';
+                contentEl.style.display = 'flex';
+                translatePage(); // Translate the newly added dynamic content
             }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            loadLinks();
-            loadCalendars();
-            loadGoogleMapsScript();
-            renderAvailabilitySchedule();
+            const checkTranslations = setInterval(() => {
+                if (Object.keys(translations).length > 0) {
+                    clearInterval(checkTranslations);
+                    loadDashboard();
+                }
+            }, 100);
         });
     </script>
 </body>

@@ -232,6 +232,56 @@ app.delete('/api/links/:id', async (req, res) => {
     }
 });
 
+app.get('/api/links/:id', async (req, res) => {
+    if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
+    try {
+        const { rows } = await pool.query('SELECT * FROM links WHERE id = $1 AND user_id = $2', [req.params.id, req.session.userId]);
+        if (rows.length === 0) {
+            return res.status(404).send('Link niet gevonden of geen toestemming.');
+        }
+        res.json(rows[0]);
+    } catch (error) {
+        console.error('Error fetching single link:', error);
+        res.status(500).send('Fout bij het ophalen van de link.');
+    }
+});
+
+app.post('/api/links/:id/duplicate', async (req, res) => {
+    if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
+    const { id } = req.params;
+    const userId = req.session.userId;
+
+    try {
+        // 1. Haal de originele link op
+        const { rows: [originalLink] } = await pool.query(
+            'SELECT * FROM links WHERE id = $1 AND user_id = $2',
+            [id, userId]
+        );
+
+        if (!originalLink) {
+            return res.status(404).send('Originele link niet gevonden.');
+        }
+
+        // 2. Bereid de nieuwe link data voor
+        const newLink = { ...originalLink };
+        newLink.id = uuidv4(); // Nieuwe unieke ID
+        newLink.title = `${originalLink.title} (kopie)`; // Pas de titel aan
+        
+        // 3. Sla de nieuwe link op in de database
+        await pool.query(
+            'INSERT INTO links (id, user_id, title, description, duration, buffer, availability, start_address, calendar_id, max_travel_time, workday_mode, include_travel_start, include_travel_end, planning_offset_days, planning_window_days) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)',
+            [newLink.id, newLink.user_id, newLink.title, newLink.description, newLink.duration, newLink.buffer, JSON.stringify(newLink.availability), newLink.start_address, newLink.calendar_id, newLink.max_travel_time, newLink.workday_mode, newLink.include_travel_start, newLink.include_travel_end, newLink.planning_offset_days, newLink.planning_window_days]
+        );
+
+        res.status(201).json({ message: 'Link succesvol gedupliceerd.', newLink });
+
+    } catch (error) {
+        console.error('Error duplicating link:', error);
+        res.status(500).send('Fout bij het dupliceren van de link.');
+    }
+});
+
+
 app.get('/api/calendars', async (req, res) => {
     if (!req.session.userId) {
         return res.status(401).send('Authenticatie vereist.');
@@ -249,6 +299,136 @@ app.get('/api/calendars', async (req, res) => {
         });
     }
 });
+
+// --- Dashboard & Appointments API ---
+
+app.get('/api/dashboard/summary', async (req, res) => {
+    if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
+    try {
+        const userId = req.session.userId;
+
+        // Query 1: Totaal aantal afspraken
+        const totalAppointmentsResult = await pool.query(
+            'SELECT COUNT(*) AS total_appointments FROM appointments WHERE user_id = $1',
+            [userId]
+        );
+        const totalAppointments = parseInt(totalAppointmentsResult.rows[0].total_appointments, 10);
+        const timeSavedMinutes = totalAppointments * 15;
+
+        // Query 2: Links met hun afspraak-aantallen
+        const linksWithCountsResult = await pool.query(`
+            SELECT 
+                l.id, 
+                l.title, 
+                l.calendar_id,
+                COUNT(a.id) AS appointment_count
+            FROM links l
+            LEFT JOIN appointments a ON l.id = a.link_id
+            WHERE l.user_id = $1
+            GROUP BY l.id
+            ORDER BY l.created_at DESC
+        `, [userId]);
+        
+        // Query 3: Agenda's met hun afspraak-aantallen
+        const calendarsWithCountsResult = await pool.query(`
+            SELECT 
+                l.calendar_id,
+                COUNT(a.id) AS appointment_count
+            FROM appointments a
+            JOIN links l ON a.link_id = l.id
+            WHERE a.user_id = $1
+            GROUP BY l.calendar_id
+            ORDER BY appointment_count DESC
+        `, [userId]);
+
+        res.json({
+            totalAppointments,
+            timeSavedMinutes,
+            links: linksWithCountsResult.rows,
+            calendars: calendarsWithCountsResult.rows,
+        });
+
+    } catch (error) {
+        console.error('Error fetching dashboard summary:', error);
+        res.status(500).json({ message: 'Fout bij het ophalen van de dashboard-samenvatting.', error: error.message });
+    }
+});
+
+app.get('/api/appointments', async (req, res) => {
+    if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
+    
+    const { linkId } = req.query;
+    let query;
+    const params = [req.session.userId];
+
+    if (linkId) {
+        query = 'SELECT * FROM appointments WHERE user_id = $1 AND link_id = $2 ORDER BY appointment_time DESC';
+        params.push(linkId);
+    } else {
+        query = 'SELECT * FROM appointments WHERE user_id = $1 ORDER BY appointment_time DESC';
+    }
+
+    try {
+        const { rows } = await pool.query(query, params);
+        res.json(rows);
+    } catch (error) {
+        console.error('Error fetching appointments:', error);
+        res.status(500).json({ message: 'Fout bij het ophalen van afspraken.', error: error.message });
+    }
+});
+
+app.delete('/api/appointments/:id', async (req, res) => {
+    if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
+
+    const { id } = req.params;
+    const userId = req.session.userId;
+
+    try {
+        // 1. Haal de afspraak en de bijbehorende link-informatie op
+        const appointmentResult = await pool.query(
+            `SELECT a.google_event_id, l.calendar_id 
+             FROM appointments a
+             JOIN links l ON a.link_id = l.id
+             WHERE a.id = $1 AND a.user_id = $2`,
+            [id, userId]
+        );
+
+        if (appointmentResult.rows.length === 0) {
+            return res.status(404).send('Afspraak niet gevonden of geen toestemming.');
+        }
+
+        const { google_event_id, calendar_id } = appointmentResult.rows[0];
+
+        // 2. Verwijder de afspraak uit Google Calendar (indien ID bestaat)
+        if (google_event_id) {
+            const auth = await getAuthenticatedClient(userId);
+            const calendar = google.calendar({ version: 'v3', auth });
+            try {
+                await calendar.events.delete({
+                    calendarId: calendar_id || 'primary',
+                    eventId: google_event_id,
+                    sendNotifications: true,
+                });
+            } catch (gcalError) {
+                // Als de afspraak al weg is in Google, is dat geen fatale fout.
+                if (gcalError.code !== 404 && gcalError.code !== 410) {
+                    throw gcalError; // Gooi de fout opnieuw als het iets anders is
+                }
+                console.warn(`Google Calendar event with ID ${google_event_id} was already deleted or not found.`);
+            }
+        }
+
+        // 3. Verwijder de afspraak uit de lokale database
+        await pool.query('DELETE FROM appointments WHERE id = $1', [id]);
+
+        res.status(204).send(); // Success, no content
+
+    } catch (error) {
+        console.error('Error deleting appointment:', error);
+        res.status(500).json({ message: 'Fout bij het verwijderen van de afspraak.', error: error.message });
+    }
+});
+
 
 // --- Availability & Booking API ---
 
@@ -415,8 +595,8 @@ app.post('/book-appointment', async (req, res) => {
         const { rows: [link] } = await pool.query('SELECT * FROM links WHERE id = $1', [linkId]);
         if (!link) return res.status(404).send('Link niet gevonden.');
 
-        await pool.query(
-            'INSERT INTO appointments (link_id, user_id, name, email, phone, comments, appointment_time, destination_address) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+        const { rows: [dbAppointment] } = await pool.query(
+            'INSERT INTO appointments (link_id, user_id, name, email, phone, comments, appointment_time, destination_address) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
             [linkId, link.user_id, name, email, phone, comments, startTime, destinationAddress]
         );
 
@@ -445,7 +625,16 @@ app.post('/book-appointment', async (req, res) => {
             attendees: [{ email }],
             reminders: { useDefault: false, overrides: [{ method: 'email', minutes: 24 * 60 }, { method: 'popup', minutes: 10 }] },
         };
-        await calendar.events.insert({ calendarId: link.calendar_id || 'primary', resource: mainEvent, sendNotifications: true });
+        
+        const createdEvent = await calendar.events.insert({ calendarId: link.calendar_id || 'primary', resource: mainEvent, sendNotifications: true });
+
+        // Sla de Google Event ID op in onze database voor toekomstig beheer
+        if (createdEvent.data.id) {
+            await pool.query(
+                'UPDATE appointments SET google_event_id = $1 WHERE id = $2',
+                [createdEvent.data.id, dbAppointment.id]
+            );
+        }
 
         res.status(200).send('Afspraak succesvol ingepland.');
     } catch (error) {

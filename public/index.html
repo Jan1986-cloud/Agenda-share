@@ -26,7 +26,7 @@
   <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom mb-4">
         <div class="container">
-            <a class="navbar-brand" href="#" data-translate="Welkom bij de Planner">Welkom bij de Planner</a>
+            <a class="navbar-brand" href="#" data-i18n="page_title_welcome"></a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -34,13 +34,10 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-translate"></i> <span data-translate="Talen">Talen</span>
+                            <i class="bi bi-translate"></i> <span data-i18n="lang_selector_title"></span>
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="languageDropdown">
-                            <li><a class="dropdown-item" href="#nl" data-translate="Nederlands">Nederlands</a></li>
-                            <li><a class="dropdown-item" href="#en" data-translate="Engels">Engels</a></li>
-                            <li><a class="dropdown-item" href="#de" data-translate="Duits">Duits</a></li>
-                            <li><a class="dropdown-item" href="#fr" data-translate="Frans">Frans</a></li>
+                            <!-- Dynamically filled by i18n.js -->
                         </ul>
                     </li>
                 </ul>
@@ -50,19 +47,12 @@
     <div class="container mt-5">
       <div class="text-center">
         <div class="hero shadow-lg mb-5">
-          <h1 class="display-4" data-translate="Deel uw agenda, moeiteloos">Deel uw agenda, moeiteloos</h1>
-          <p class="lead" data-translate="Maak een persoonlijke link aan op basis van uw Google Agenda en laat anderen eenvoudig een afspraak met u inplannen. Geen gedoe meer met heen-en-weer mailen.">
-            Maak een persoonlijke link aan op basis van uw Google Agenda en laat
-            anderen eenvoudig een afspraak met u inplannen. Geen gedoe meer met
-            heen-en-weer mailen.
-          </p>
+          <h1 class="display-4" data-i18n="welcome_hero_title"></h1>
+          <p class="lead" data-i18n="welcome_hero_subtitle"></p>
         </div>
 
-        <h2 class="mb-4" data-translate="Klaar om te beginnen?">Klaar om te beginnen?</h2>
-        <p class="lead text-muted mb-4" data-translate="Log in met uw Google-account om uw agenda te koppelen en uw eerste deelbare link aan te maken.">
-          Log in met uw Google-account om uw agenda te koppelen en uw eerste
-          deelbare link aan te maken.
-        </p>
+        <h2 class="mb-4" data-i18n="welcome_cta_title"></h2>
+        <p class="lead text-muted mb-4" data-i18n="welcome_cta_subtitle"></p>
         <a href="/auth" class="btn btn-primary btn-lg shadow">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -76,13 +66,12 @@
               d="M15.545 6.558a9.42 9.42 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0a7.689 7.689 0 0 1 5.352 2.082l-2.284 2.284A4.347 4.347 0 0 0 8 3.166c-2.087 0-3.86 1.408-4.492 3.25C3.21 7.855 3 8.923 3 10s.21 2.145.508 3.584C4.14 14.592 5.913 16 8 16c1.055 0 2.054-.333 2.885-.943l2.66 2.66A8 8 0 0 1 8 16z"
             />
           </svg>
-          <span data-translate="Inloggen met Google">Inloggen met Google</span>
+          <span data-i18n="login_with_google"></span>
         </a>
       </div>
-      <footer class='text-center mt-5 p-4 text-muted border-top'><a href='/privacy.html' data-translate="Privacybeleid">Privacybeleid</a></footer>
+      <footer class='text-center mt-5 p-4 text-muted border-top'><a href='/privacy.html' data-i18n="privacy_policy"></a></footer>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/dictionaries.js"></script>
-    <script src="js/main.js"></script>
+    <script src="js/i18n.js"></script>
   </body>
 </html>
