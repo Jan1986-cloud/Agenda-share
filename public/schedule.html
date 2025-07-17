@@ -154,12 +154,22 @@
         }
 
         async function handleTimeSlotClick(slot, btn) {
+            // Voorkom dubbelklikken en onnodige API-calls
+            if (btn.classList.contains('btn-success') || btn.disabled) {
+                // Als al groen is, selecteer het gewoon.
+                if(btn.classList.contains('btn-success')) {
+                    selectedSlot = slot;
+                    document.querySelectorAll('#time-picker .btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    document.getElementById('booking-form').style.display = 'block';
+                }
+                return;
+            }
+
             // Reset de status van andere knoppen
             document.querySelectorAll('#time-picker .btn').forEach(otherBtn => {
                 if (otherBtn !== btn) {
-                    otherBtn.disabled = false;
-                    otherBtn.className = `btn btn-outline-primary ${marginClassMap[otherBtn.dataset.margin] || ''}`;
-                    otherBtn.innerHTML = new Date(otherBtn.dataset.start).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+                    otherBtn.classList.remove('active');
                 }
             });
 
@@ -179,18 +189,38 @@
                 const data = await response.json();
                 updateDiagnostics(data.diagnostic);
 
-                const certainty = certaintyInfo[data.certainty] || certaintyInfo.red;
-                btn.className = `btn ${certainty.class}`;
-                btn.innerHTML = new Date(slot.start).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+                // --- RIPPLE EFFECT ---
+                const viableStarts = new Set(data.updatedGapSlots.map(s => s.start));
+                const timePicker = document.getElementById('time-picker');
+                const allButtons = Array.from(timePicker.querySelectorAll('button'));
 
-                if (data.isViable) {
-                    selectedSlot = slot;
-                    btn.classList.add('active');
-                    btn.disabled = false;
-                    document.getElementById('booking-form').style.display = 'block';
-                } else {
-                    btn.disabled = true;
+                allButtons.forEach(b => {
+                    const bStart = b.dataset.start;
+                    if (viableStarts.has(bStart)) {
+                        b.className = 'btn btn-success';
+                        b.disabled = false;
+                        b.innerHTML = new Date(bStart).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+                    } else {
+                        // Als het de geklikte knop is en niet levensvatbaar, markeer als rood.
+                        if (b === btn) {
+                             const certainty = certaintyInfo[data.certainty] || certaintyInfo.red;
+                             btn.className = `btn ${certainty.class}`;
+                             btn.innerHTML = new Date(slot.start).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+                             btn.disabled = true;
+                        } else {
+                            b.remove(); // Verwijder andere niet-levensvatbare slots
+                        }
+                    }
+                });
+                
+                // Handel de geklikte knop af
+                const clickedButton = allButtons.find(b => b.dataset.start === slot.start);
+                if (clickedButton && data.isViable) {
+                     selectedSlot = slot;
+                     clickedButton.classList.add('active');
+                     document.getElementById('booking-form').style.display = 'block';
                 }
+
 
             } catch (error) {
                 console.error('Fout bij slot verificatie:', error);

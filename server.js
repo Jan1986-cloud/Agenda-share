@@ -266,7 +266,7 @@ app.get('/get-availability', async (req, res) => {
     }
 });
 
-// STAP 2: Nieuw endpoint om een specifiek slot te verifiëren MET reistijd.
+// STAP 2: Endpoint om een specifiek slot te verifiëren EN het ripple-effect te berekenen.
 app.post('/verify-slot', async (req, res) => {
     const { linkId, destinationAddress, slotStart } = req.body;
     if (!linkId || !destinationAddress || !slotStart) {
@@ -279,29 +279,21 @@ app.post('/verify-slot', async (req, res) => {
         if (typeof link.availability === 'string') link.availability = JSON.parse(link.availability);
 
         const auth = await getAuthenticatedClient(link.user_id);
-        
         const potentialStart = new Date(slotStart);
-        const potentialEnd = new Date(potentialStart.getTime() + link.duration * 60000);
-
-        // Essentiële CRASH FIX: Controleer of er een regel bestaat voor deze dag.
         const dayOfWeek = potentialStart.getUTCDay();
         const rule = link.availability.find(r => r.dayOfWeek === dayOfWeek);
+
         if (!rule) {
-            return res.json({ isViable: false, certainty: 'red', diagnostic: [] });
+            return res.json({ isViable: false, certainty: 'red', diagnostic: [], updatedGapSlots: [] });
         }
 
-        // Haal busy slots op voor de HELE dag van het geselecteerde slot.
         const a_day_in_ms = 24 * 60 * 60 * 1000;
-        const slot_start_date = new Date(slotStart)
-        const timeMin = new Date(slot_start_date.setUTCHours(0,0,0,0));
+        const timeMin = new Date(new Date(slotStart).setUTCHours(0, 0, 0, 0));
         const timeMax = new Date(timeMin.getTime() + a_day_in_ms);
         const busySlots = await getBusySlots(auth, link.calendar_id, timeMin, timeMax);
 
-        const lastAppointmentBefore = busySlots
-            .filter(s => s.end.getTime() <= potentialStart.getTime())
-            .pop();
-        const nextAppointmentAfter = busySlots
-            .find(s => s.start.getTime() >= potentialEnd.getTime());
+        const lastAppointmentBefore = busySlots.filter(s => s.end.getTime() <= potentialStart.getTime()).pop();
+        const nextAppointmentAfter = busySlots.find(s => s.start.getTime() >= new Date(potentialStart.getTime() + link.duration * 60000).getTime());
 
         const originAddress = lastAppointmentBefore ? (lastAppointmentBefore.location || link.start_address) : link.start_address;
         const destinationForNextTrip = nextAppointmentAfter ? (nextAppointmentAfter.location || link.start_address) : link.start_address;
@@ -318,45 +310,50 @@ app.post('/verify-slot', async (req, res) => {
         const travelIsKnown = travelToResult.status === 'OK' && travelFromResult.status === 'OK';
         let isViable = false;
         let certainty = 'red';
-
-        const [startHour, startMinute] = rule.startTime.split(':').map(Number);
-        const [endHour, endMinute] = rule.endTime.split(':').map(Number);
-        const dayStart = new Date(Date.UTC(potentialStart.getUTCFullYear(), potentialStart.getUTCMonth(), potentialStart.getUTCDate(), startHour, startMinute));
-        const dayEnd = new Date(Date.UTC(potentialStart.getUTCFullYear(), potentialStart.getUTCMonth(), potentialStart.getUTCDate(), endHour, endMinute));
-
-        const earliestPossibleStart = (lastAppointmentBefore ? lastAppointmentBefore.end.getTime() : dayStart.getTime()) + (link.buffer * 60000);
-        const latestPossibleEnd = (nextAppointmentAfter ? nextAppointmentAfter.start.getTime() : dayEnd.getTime()) - (link.buffer * 60000);
+        let updatedGapSlots = [];
 
         if (travelIsKnown) {
-            const travelToMs = travelToResult.duration * 1000;
-            const travelFromMs = travelFromResult.duration * 1000;
+            const options = {
+                ...link,
+                busySlots,
+                targetDate: slotStart.split('T')[0],
+                knownTravelTimes: {
+                    travelToDuration: travelToResult.duration,
+                    travelFromDuration: travelFromResult.duration
+                }
+            };
+            const { slots } = await calculateAvailability(options);
+            updatedGapSlots = slots.map(s => ({ ...s, start: s.start.toISOString(), end: s.end.toISOString() }));
             
-            if (potentialStart.getTime() >= earliestPossibleStart + travelToMs && potentialEnd.getTime() + travelFromMs <= latestPossibleEnd) {
+            if (updatedGapSlots.some(s => s.start === slotStart)) {
                 isViable = true;
                 certainty = 'green';
             }
         } else {
-            // Fallback naar marge-gebaseerde logica als reistijd onbekend is.
+            // Fallback-logica blijft hetzelfde
+            const [startHour, startMinute] = rule.startTime.split(':').map(Number);
+            const [endHour, endMinute] = rule.endTime.split(':').map(Number);
+            const dayStart = new Date(Date.UTC(potentialStart.getUTCFullYear(), potentialStart.getUTCMonth(), potentialStart.getUTCDate(), startHour, startMinute));
+            const dayEnd = new Date(Date.UTC(potentialStart.getUTCFullYear(), potentialStart.getUTCMonth(), potentialStart.getUTCDate(), endHour, endMinute));
+            const earliestPossibleStart = (lastAppointmentBefore ? lastAppointmentBefore.end.getTime() : dayStart.getTime()) + (link.buffer * 60000);
+            const latestPossibleEnd = (nextAppointmentAfter ? nextAppointmentAfter.start.getTime() : dayEnd.getTime()) - (link.buffer * 60000);
             const timeBeforeMs = potentialStart.getTime() - earliestPossibleStart;
-            const timeAfterMs = latestPossibleEnd - potentialEnd.getTime();
+            const timeAfterMs = latestPossibleEnd - new Date(potentialStart.getTime() + link.duration * 60000).getTime();
             const totalMarginMs = Math.min(timeBeforeMs, timeAfterMs);
 
             if (totalMarginMs >= 0) {
-                 isViable = true; // Het past in ieder geval zonder reistijd.
-                 if (totalMarginMs >= 3600000) { // > 1 uur marge
-                    certainty = 'grey'; // Grijs voor grote marge
-                } else if (totalMarginMs >= 1800000) { // 30-60 min marge
-                    certainty = 'yellow'; // Geel voor medium marge
-                } else { // < 30 min marge
-                    certainty = 'red';
-                }
+                 isViable = true;
+                 if (totalMarginMs >= 3600000) certainty = 'grey';
+                 else if (totalMarginMs >= 1800000) certainty = 'yellow';
+                 else certainty = 'red';
             }
         }
 
         res.json({ 
             isViable,
             certainty,
-            diagnostic: [travelToResult, travelFromResult]
+            diagnostic: [travelToResult, travelFromResult],
+            updatedGapSlots
         });
 
     } catch (err) {
