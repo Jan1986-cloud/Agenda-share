@@ -11,10 +11,33 @@
     </style>
 </head>
 <body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#" data-translate="Privacybeleid">Privacybeleid</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-translate"></i> <span data-translate="Talen">Talen</span>
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="languageDropdown">
+                            <li><a class="dropdown-item" href="#nl" data-translate="Nederlands">Nederlands</a></li>
+                            <li><a class="dropdown-item" href="#en" data-translate="Engels">Engels</a></li>
+                            <li><a class="dropdown-item" href="#de" data-translate="Duits">Duits</a></li>
+                            <li><a class="dropdown-item" href="#fr" data-translate="Frans">Frans</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
     <div class="container my-5">
         <div class="card shadow-sm">
             <div class="card-body p-4 p-md-5">
-                <h1 class="h2 mb-4">Privacybeleid</h1>
+                <h1 class="h2 mb-4" data-translate="Privacybeleid">Privacybeleid</h1>
                 <p>Dit privacybeleid beschrijft hoe uw persoonlijke informatie wordt verzameld, gebruikt en gedeeld wanneer u onze applicatie gebruikt.</p>
 
                 <h2 class="h4 mt-5">Persoonlijke Informatie die we Verzamelen</h2>
@@ -51,5 +74,8 @@
             </div>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/dictionaries.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>

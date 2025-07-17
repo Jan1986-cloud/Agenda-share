@@ -15,84 +15,109 @@
     </style>
 </head>
 <body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#" data-translate="Plan een afspraak">Plan een afspraak</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-translate"></i> <span data-translate="Talen">Talen</span>
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="languageDropdown">
+                            <li><a class="dropdown-item" href="#nl" data-translate="Nederlands">Nederlands</a></li>
+                            <li><a class="dropdown-item" href="#en" data-translate="Engels">Engels</a></li>
+                            <li><a class="dropdown-item" href="#de" data-translate="Duits">Duits</a></li>
+                            <li><a class="dropdown-item" href="#fr" data-translate="Frans">Frans</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
     <div class="container mt-5">
         <div class="card shadow-sm">
             <div class="card-body p-5">
                 <div id="address-view">
-                    <h1 id="appointment-title-main" class="card-title text-center mb-4">🗓️ Plan uw afspraak</h1>
+                    <h1 id="appointment-title-main" class="card-title text-center mb-4" data-translate="Plan uw afspraak">🗓️ Plan uw afspraak</h1>
                     <p id="appointment-description" class="text-center"></p>
-                    <p class="text-center text-muted mb-4">Voer uw adres in om de reistijd te berekenen en beschikbare tijden te zien.</p>
+                    <p class="text-center text-muted mb-4" data-translate="Voer uw adres in om de reistijd te berekenen en beschikbare tijden te zien.">Voer uw adres in om de reistijd te berekenen en beschikbare tijden te zien.</p>
                     <div class="mb-3">
-                        <label for="destinationAddress" class="form-label fs-5">Uw afspraakadres</label>
-                        <input type="text" class="form-control form-control-lg" id="destinationAddress" placeholder="Begin met typen..." required />
+                        <label for="destinationAddress" class="form-label fs-5" data-translate="Uw afspraakadres">Uw afspraakadres</label>
+                        <input type="text" class="form-control form-control-lg" id="destinationAddress" placeholder="Begin met typen..." data-translate-placeholder="Begin met typen..." required />
                     </div>
                     <div class="d-grid">
-                        <button id="check-availability-btn" class="btn btn-primary btn-lg">Toon beschikbare tijden</button>
+                        <button id="check-availability-btn" class="btn btn-primary btn-lg" data-translate="Toon beschikbare tijden">Toon beschikbare tijden</button>
                     </div>
                 </div>
 
                 <div id="loading-view" style="display: none" class="text-center">
                     <div class="spinner-border" role="status"><span class="visually-hidden">Laden...</span></div>
-                    <p class="mt-3">Beschikbaarheid wordt berekend...</p>
+                    <p class="mt-3" data-translate="Beschikbaarheid wordt berekend...">Beschikbaarheid wordt berekend...</p>
                 </div>
 
                 <div id="booking-view" style="display: none">
                     <h2 id="appointment-title-booking" class="text-center mb-4"></h2>
-                    <p class="text-center text-muted mb-4">Kies een dag en een tijdstip. Klik op een tijd om de reistijd te controleren.</p>
+                    <p class="text-center text-muted mb-4" data-translate="Kies een dag en een tijdstip. Klik op een tijd om de reistijd te controleren.">Kies een dag en een tijdstip. Klik op een tijd om de reistijd te controleren.</p>
                     <div class="row">
                         <div class="col-md-6">
-                            <h3 class="fs-5 text-center mb-3">Kies een dag ☀️</h3>
+                            <h3 class="fs-5 text-center mb-3" data-translate="Kies een dag">Kies een dag ☀️</h3>
                             <div id="day-picker" class="slot-picker"></div>
                         </div>
                         <div class="col-md-6">
-                            <h3 class="fs-5 text-center mb-3">Kies een tijd ⏰</h3>
+                            <h3 class="fs-5 text-center mb-3" data-translate="Kies een tijd">Kies een tijd ⏰</h3>
                             <div id="time-picker" class="slot-picker"></div>
                         </div>
                     </div>
                     
                     <div id="legend" class="mt-4 p-3 bg-light border rounded" style="display: none;">
-                        <h4 class="fs-6 mb-3">Uitleg kleuren</h4>
+                        <h4 class="fs-6 mb-3" data-translate="Uitleg kleuren">Uitleg kleuren</h4>
                         <ul class="list-unstyled mb-0"></ul>
                     </div>
 
                     <div id="diagnostic-panel" class="mt-4" style="display: none;">
-                        <h4 class="fs-6">🤖 Reistijdrekenmachine</h4>
+                        <h4 class="fs-6" data-translate="Reistijdrekenmachine">🤖 Reistijdrekenmachine</h4>
                         <div class="table-responsive" style="max-height: 200px;">
                             <table class="table table-sm table-bordered">
-                                <thead><tr><th>Van</th><th>Naar</th><th>Status</th><th>Reistijd</th></tr></thead>
+                                <thead><tr><th data-translate="Van">Van</th><th data-translate="Naar">Naar</th><th data-translate="Status">Status</th><th data-translate="Reistijd">Reistijd</th></tr></thead>
                                 <tbody id="diagnostic-table-body"></tbody>
                             </table>
-                            <p class="text-muted small mt-2">Reistijd is een schatting bij normale verkeersdrukte.</p>
+                            <p class="text-muted small mt-2" data-translate="Reistijd is een schatting bij normale verkeersdrukte.">Reistijd is een schatting bij normale verkeersdrukte.</p>
                             <p id="total-time-info" class="fw-bold"></p>
                         </div>
                     </div>
 
                     <form id="booking-form" style="display: none" class="mt-4">
-                        <h3 id="booking-form-title" class="fs-5 mb-3">Bevestig uw gegevens</h3>
-                        <div class="mb-3"><label for="name" class="form-label">Uw naam</label><input type="text" id="name" class="form-control" required /></div>
-                        <div class="mb-3"><label for="email" class="form-label">Uw e-mailadres</label><input type="email" id="email" class="form-control" required /></div>
-                        <div class="mb-3"><label for="phone" class="form-label">Uw telefoonnummer</label><input type="tel" id="phone" class="form-control" required /></div>
-                        <div class="mb-3"><label for="comments" class="form-label">Opmerkingen (optioneel)</label><textarea id="comments" class="form-control" rows="3"></textarea></div>
-                        <div class="d-grid"><button type="submit" class="btn btn-success btn-lg">✅ Afspraak bevestigen</button></div>
+                        <h3 id="booking-form-title" class="fs-5 mb-3" data-translate="Bevestig uw gegevens">Bevestig uw gegevens</h3>
+                        <div class="mb-3"><label for="name" class="form-label" data-translate="Uw naam">Uw naam</label><input type="text" id="name" class="form-control" required /></div>
+                        <div class="mb-3"><label for="email" class="form-label" data-translate="Uw e-mailadres">Uw e-mailadres</label><input type="email" id="email" class="form-control" required /></div>
+                        <div class="mb-3"><label for="phone" class="form-label" data-translate="Uw telefoonnummer">Uw telefoonnummer</label><input type="tel" id="phone" class="form-control" required /></div>
+                        <div class="mb-3"><label for="comments" class="form-label" data-translate="Opmerkingen (optioneel)">Opmerkingen (optioneel)</label><textarea id="comments" class="form-control" rows="3"></textarea></div>
+                        <div class="d-grid"><button type="submit" class="btn btn-success btn-lg" data-translate="Afspraak bevestigen">✅ Afspraak bevestigen</button></div>
                     </form>
                 </div>
 
                 <div id="confirmation-view" style="display: none" class="text-center">
-                    <h2 class="text-success mb-3">🎉 Afspraak bevestigd!</h2>
-                    <p>U ontvangt een bevestiging per e-mail met de details van uw afspraak.</p>
+                    <h2 class="text-success mb-3" data-translate="Afspraak bevestigd!">🎉 Afspraak bevestigd!</h2>
+                    <p data-translate="U ontvangt een bevestiging per e-mail met de details van uw afspraak.">U ontvangt een bevestiging per e-mail met de details van uw afspraak.</p>
                 </div>
 
                 <div id="error-view" style="display: none" class="text-center">
-                    <h2 class="text-danger mb-3">Er is iets misgegaan</h2>
+                    <h2 class="text-danger mb-3" data-translate="Er is iets misgegaan">Er is iets misgegaan</h2>
                     <p id="error-message"></p>
-                    <button class="btn btn-primary" onclick="location.reload()">Probeer opnieuw</button>
+                    <button class="btn btn-primary" onclick="location.reload()" data-translate="Probeer opnieuw">Probeer opnieuw</button>
                 </div>
             </div>
         </div>
+        <footer class='text-center mt-5 p-4 text-muted border-top'><a href='/privacy.html' data-translate="Privacybeleid">Privacybeleid</a></footer>
     </div>
 
-    <footer class='text-center mt-5 p-4 text-muted border-top'><a href='/privacy.html'>Privacybeleid</a></footer>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/dictionaries.js"></script>
+    <script src="js/main.js"></script>
     <script>
         const params = new URLSearchParams(window.location.search);
         const linkId = params.get('linkId');
@@ -184,26 +209,37 @@
 
         async function handleTimeSlotClick(slot, btn) {
             if (btn.disabled) return;
-            
-            if (btn.classList.contains('active')) {
-                btn.classList.remove('active');
-                btn.className = 'btn btn-outline-success border-success';
-                document.getElementById('booking-form').style.display = 'none';
-                selectedSlot = null;
-                return;
-            }
-            
-            if (btn.classList.contains('btn-success')) {
-                selectedSlot = slot;
+
+            const dayKey = slot.start.split('T')[0];
+
+            // Als de dag al geverifieerd is, handel alleen de UI af.
+            if (rippledDays.has(dayKey)) {
+                const wasActive = btn.classList.contains('active');
+
+                // Reset alle knoppen voor die dag
                 document.querySelectorAll('#time-picker .btn').forEach(b => {
-                    if (b !== btn) b.classList.remove('active');
+                    b.classList.remove('active', 'btn-success');
+                    if (!b.classList.contains('btn-outline-success')) {
+                        b.classList.add('btn-outline-success', 'border-success');
+                    }
                 });
-                btn.className = 'btn btn-success active';
-                document.getElementById('booking-form-title').innerHTML = `📝 Bevestig uw gegevens voor <strong>${appointmentTitle}</strong> bij <i>${creatorEmail}</i>`;
-                document.getElementById('booking-form').style.display = 'block';
-                return;
+
+                if (wasActive) {
+                    // Deselecteer
+                    selectedSlot = null;
+                    document.getElementById('booking-form').style.display = 'none';
+                } else {
+                    // Selecteer
+                    selectedSlot = slot;
+                    btn.classList.add('active', 'btn-success');
+                    btn.classList.remove('btn-outline-success', 'border-success');
+                    document.getElementById('booking-form-title').innerHTML = `📝 Bevestig uw gegevens voor <strong>${appointmentTitle}</strong> bij <i>${creatorEmail}</i>`;
+                    document.getElementById('booking-form').style.display = 'block';
+                }
+                return; // Stop hier, geen API call nodig.
             }
 
+            // Alleen als de dag nog niet geverifieerd is, doe de API call.
             document.querySelectorAll('#time-picker .btn').forEach(b => b.classList.remove('active'));
             btn.disabled = true;
             btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>`;
@@ -231,7 +267,6 @@
                 const data = await response.json();
                 updateDiagnostics(data.diagnostic);
                 
-                const dayKey = slot.start.split('T')[0];
                 rippledDays.add(dayKey);
                 slotsByDay.set(dayKey, data.updatedGapSlots);
                 renderTimeSlots(dayKey);
@@ -239,7 +274,8 @@
                 const clickedButton = Array.from(document.querySelectorAll('#time-picker .btn')).find(b => b.dataset.start === slot.start);
                 if (clickedButton && data.isViable) {
                      selectedSlot = slot;
-                     clickedButton.className = 'btn btn-success active';
+                     clickedButton.classList.remove('btn-outline-success', 'border-success');
+                     clickedButton.classList.add('btn-success', 'active');
                      document.getElementById('booking-form-title').innerHTML = `📝 Bevestig uw gegevens voor <strong>${appointmentTitle}</strong> bij <i>${creatorEmail}</i>`;
                      document.getElementById('booking-form').style.display = 'block';
                 } else if (clickedButton) {

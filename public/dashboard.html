@@ -36,64 +36,87 @@
     </style>
 </head>
 <body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#" data-translate="Dashboard">Dashboard</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-translate"></i> <span data-translate="Talen">Talen</span>
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="languageDropdown">
+                            <li><a class="dropdown-item" href="#nl" data-translate="Nederlands">Nederlands</a></li>
+                            <li><a class="dropdown-item" href="#en" data-translate="Engels">Engels</a></li>
+                            <li><a class="dropdown-item" href="#de" data-translate="Duits">Duits</a></li>
+                            <li><a class="dropdown-item" href="#fr" data-translate="Frans">Frans</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
     <div class="container my-5">
         <div class="card shadow-sm mb-5">
             <div class="card-body p-4 p-md-5">
-                <h1 class="h2 mb-4" id="form-title">Nieuwe Link Aanmaken</h1>
+                <h1 class="h2 mb-4" id="form-title" data-translate="Nieuwe Link Aanmaken">Nieuwe Link Aanmaken</h1>
                 <form id="link-form">
                     <input type="hidden" id="linkId" />
                     <div class="mb-3">
-                        <label for="title" class="form-label">Titel van de afspraak</label>
-                        <input type="text" class="form-control" id="title" placeholder="Bijv. Kennismakingsgesprek" required />
+                        <label for="title" class="form-label" data-translate="Titel van de afspraak">Titel van de afspraak</label>
+                        <input type="text" class="form-control" id="title" placeholder="Bijv. Kennismakingsgesprek" data-translate-placeholder="Bijv. Kennismakingsgesprek" required />
                     </div>
                     <div class="mb-3">
-                        <label for="description" class="form-label">Omschrijving</label>
-                        <textarea class="form-control" id="description" rows="3" placeholder="Voeg hier een korte omschrijving toe voor de afspraak..."></textarea>
+                        <label for="description" class="form-label" data-translate="Omschrijving">Omschrijving</label>
+                        <textarea class="form-control" id="description" rows="3" placeholder="Voeg hier een korte omschrijving toe voor de afspraak..." data-translate-placeholder="Voeg hier een korte omschrijving toe voor de afspraak..."></textarea>
                     </div>
                     <div class="mb-3">
-                        <label for="startAddress" class="form-label">Uw vaste vertrekadres</label>
-                        <input type="text" class="form-control" id="startAddress" placeholder="Begin met typen..." required />
+                        <label for="startAddress" class="form-label" data-translate="Uw vaste vertrekadres">Uw vaste vertrekadres</label>
+                        <input type="text" class="form-control" id="startAddress" placeholder="Begin met typen..." data-translate-placeholder="Begin met typen..." required />
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label for="duration" class="form-label">Duur (minuten)</label>
+                            <label for="duration" class="form-label" data-translate="Duur (minuten)">Duur (minuten)</label>
                             <input type="number" class="form-control" id="duration" value="30" required />
                         </div>
                         <div class="col-md-6">
-                            <label for="buffer" class="form-label">Buffertijd (minuten)</label>
-                            <input type="number" class="form-control" id="buffer" value="15" placeholder="Tijd tussen afspraken" />
+                            <label for="buffer" class="form-label" data-translate="Buffertijd (minuten)">Buffertijd (minuten)</label>
+                            <input type="number" class="form-control" id="buffer" value="15" placeholder="Tijd tussen afspraken" data-translate-placeholder="Tijd tussen afspraken" />
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="calendarId" class="form-label">Agenda</label>
+                        <label for="calendarId" class="form-label" data-translate="Agenda">Agenda</label>
                         <select id="calendarId" class="form-select"></select>
                     </div>
                     <hr class="my-4" />
-                    <h6 class="mb-3">Planning Instellingen</h6>
+                    <h6 class="mb-3" data-translate="Planning Instellingen">Planning Instellingen</h6>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label for="planning_offset_days" class="form-label">Start planning over (dagen)</label>
+                            <label for="planning_offset_days" class="form-label" data-translate="Start planning over (dagen)">Start planning over (dagen)</label>
                             <input type="number" class="form-control" id="planning_offset_days" value="0" />
                         </div>
                         <div class="col-md-6">
-                            <label for="planning_window_days" class="form-label">Toon beschikbaarheid voor (dagen)</label>
+                            <label for="planning_window_days" class="form-label" data-translate="Toon beschikbaarheid voor (dagen)">Toon beschikbaarheid voor (dagen)</label>
                             <input type="number" class="form-control" id="planning_window_days" value="14" />
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
-                            <label for="maxTravelTime" class="form-label">Maximale reistijd (minuten)</label>
-                            <input type="number" class="form-control" id="maxTravelTime" placeholder="Leeg voor geen limiet" />
+                            <label for="maxTravelTime" class="form-label" data-translate="Maximale reistijd (minuten)">Maximale reistijd (minuten)</label>
+                            <input type="number" class="form-control" id="maxTravelTime" placeholder="Leeg voor geen limiet" data-translate-placeholder="Leeg voor geen limiet" />
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Werkdag modus</label>
+                            <label class="form-label" data-translate="Werkdag modus">Werkdag modus</label>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="workdayMode" id="workday-fixed" value="VAST" checked>
-                                <label class="form-check-label" for="workday-fixed">Vaste kantooruren</label>
+                                <label class="form-check-label" for="workday-fixed" data-translate="Vaste kantooruren">Vaste kantooruren</label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="workdayMode" id="workday-flexible" value="FLEXIBEL">
-                                <label class="form-check-label" for="workday-flexible">Flexibel (o.b.v. afspraken)</label>
+                                <label class="form-check-label" for="workday-flexible" data-translate="Flexibel (o.b.v. afspraken)">Flexibel (o.b.v. afspraken)</label>
                             </div>
                         </div>
                     </div>
@@ -101,41 +124,43 @@
                         <div class="col-md-6">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="includeTravelStart" checked>
-                                <label class="form-check-label" for="includeTravelStart">Reistijd naar 1e afspraak meerekenen</label>
+                                <label class="form-check-label" for="includeTravelStart" data-translate="Reistijd naar 1e afspraak meerekenen">Reistijd naar 1e afspraak meerekenen</label>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" role="switch" id="includeTravelEnd" checked>
-                                <label class="form-check-label" for="includeTravelEnd">Reistijd vanaf laatste afspraak meerekenen</label>
+                                <label class="form-check-label" for="includeTravelEnd" data-translate="Reistijd vanaf laatste afspraak meerekenen">Reistijd vanaf laatste afspraak meerekenen</label>
                             </div>
                         </div>
                     </div>
                     <hr class="my-4" />
-                    <h6 class="mb-3">Wekelijkse beschikbaarheid (Uw lokale tijd)</h6>
+                    <h6 class="mb-3" data-translate="Wekelijkse beschikbaarheid (Uw lokale tijd)">Wekelijkse beschikbaarheid (Uw lokale tijd)</h6>
                     <div id="availability-schedule"></div>
                     <div class="d-flex justify-content-end align-items-center mt-4">
-                        <button type="button" class="btn btn-secondary me-2" id="clear-form-btn" style="display: none;">Annuleren</button>
-                        <button type="submit" class="btn btn-primary" id="save-link-btn">Link Opslaan</button>
+                        <button type="button" class="btn btn-secondary me-2" id="clear-form-btn" style="display: none;" data-translate="Annuleren">Annuleren</button>
+                        <button type="submit" class="btn btn-primary" id="save-link-btn" data-translate="Link Opslaan">Link Opslaan</button>
                     </div>
                 </form>
             </div>
         </div>
 
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="h3">Mijn Bestaande Links</h2>
+            <h2 class="h3" data-translate="Mijn Bestaande Links">Mijn Bestaande Links</h2>
         </div>
         <div class="card shadow-sm">
             <div class="card-body p-0">
                 <ul class="list-group list-group-flush" id="links-list">
-                    <li class="list-group-item p-4 text-center text-muted" id="loading-links">Links worden geladen...</li>
+                    <li class="list-group-item p-4 text-center text-muted" id="loading-links" data-translate="Links worden geladen...">Links worden geladen...</li>
                 </ul>
             </div>
         </div>
+        <footer class='text-center mt-5 p-4 text-muted border-top'><a href='/privacy.html' data-translate="Privacybeleid">Privacybeleid</a></footer>
     </div>
 
-    <footer class='text-center mt-5 p-4 text-muted border-top'><a href='/privacy.html'>Privacybeleid</a></footer>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/dictionaries.js"></script>
+    <script src="js/main.js"></script>
     <script>
         let mapsApiKey = null;
         let autocomplete;
