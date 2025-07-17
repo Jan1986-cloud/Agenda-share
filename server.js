@@ -174,7 +174,10 @@ app.get('/api/links', async (req, res) => {
         res.json(rows);
     } catch (error) {
         console.error('Error fetching links:', error);
-        res.status(500).send('Fout bij het ophalen van links.');
+        res.status(500).json({
+            message: error.message,
+            stack: error.stack,
+        });
     }
 });
 
@@ -240,7 +243,10 @@ app.get('/api/calendars', async (req, res) => {
         res.json(result.data.items);
     } catch (error) {
         console.error('Error fetching calendar list:', error);
-        res.status(500).send('Fout bij het ophalen van de kalenderlijst.');
+        res.status(500).json({
+            message: error.message,
+            stack: error.stack,
+        });
     }
 });
 
