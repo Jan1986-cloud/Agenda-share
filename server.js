@@ -419,14 +419,20 @@ app.post('/book-appointment', async (req, res) => {
         const appointmentStart = new Date(startTime);
         const appointmentEnd = new Date(appointmentStart.getTime() + link.duration * 60000);
 
-        let description = `Afspraak met ${name} (${phone}).`;
+        // Bouw de omschrijving op
+        let finalDescription = link.description || '';
         if (comments) {
-            description += `\n\nOpmerkingen: ${comments}`;
+            if (finalDescription) {
+                finalDescription += '\n\n---\n\n';
+            }
+            finalDescription += `Opmerkingen van de klant:\n${comments}`;
         }
+        finalDescription += `\n\n---\nIngepland door: ${name} (${email}, ${phone})`;
+
 
         const mainEvent = {
             summary: link.title,
-            description: description,
+            description: finalDescription,
             location: destinationAddress,
             start: { dateTime: appointmentStart.toISOString(), timeZone: 'Europe/Amsterdam' },
             end: { dateTime: appointmentEnd.toISOString(), timeZone: 'Europe/Amsterdam' },

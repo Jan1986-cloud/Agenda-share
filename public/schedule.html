@@ -363,10 +363,11 @@
             const phone = document.getElementById('phone').value;
 
             try {
+                const comments = document.getElementById('comments').value;
                 const response = await fetch('/book-appointment', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ linkId, startTime: selectedSlot.start, name, email, destinationAddress, phone }),
+                    body: JSON.stringify({ linkId, startTime: selectedSlot.start, name, email, destinationAddress, phone, comments }),
                 });
                 if (!response.ok) throw new Error('Kon de afspraak niet boeken.');
                 switchView('confirmation-view');
