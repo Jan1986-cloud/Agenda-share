@@ -10,7 +10,7 @@
         .container { max-width: 700px; }
         .card { border-radius: 0.75rem; }
         .slot-picker { height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.5rem; padding: 0.5rem; }
-        .slot-picker .btn { width: 100%; margin-bottom: 0.5rem; }
+        .slot-picker .btn { width: 100%; margin-bottom: 0.5rem; border-width: 2px; }
         .slot-picker .btn.verifying .spinner-border { width: 1rem; height: 1rem; }
     </style>
 </head>
@@ -97,11 +97,17 @@
         let slotsByDay = new Map();
         let destinationAddress = '';
 
+        const marginClassMap = {
+            blue: 'border-primary',
+            yellow: 'border-warning',
+            red: 'border-danger'
+        };
+
         const certaintyInfo = {
             green:  { class: 'btn-success', text: 'Reistijd is berekend. Deze afspraak is bevestigd.' },
-            grey:   { class: 'btn-secondary', text: 'Reistijd onbekend, marge is >1 uur. Afspraak onder voorbehoud.' },
-            yellow: { class: 'btn-warning', text: 'Reistijd onbekend, marge is 30-60 min. Afspraak onder voorbehoud.' },
-            red:    { class: 'btn-danger',  text: 'Niet beschikbaar. De benodigde reistijd past niet of de marge is te klein.' },
+            blue:   { class: 'border-primary', text: 'Ruime marge (>1 uur) tot de volgende afspraak.' },
+            yellow: { class: 'border-warning', text: 'Beperkte marge (30-60 min) tot de volgende afspraak.' },
+            red:    { class: 'border-danger',  text: 'Weinig marge (<30 min) tot de volgende afspraak.' },
         };
 
         function switchView(viewId) {
@@ -118,10 +124,13 @@
         function displayLegend() {
             const legendContainer = document.querySelector('#legend ul');
             legendContainer.innerHTML = '';
-            Object.entries(certaintyInfo).forEach(([key, info]) => {
+            // Aangepaste volgorde voor de legende
+            ['green', 'blue', 'yellow', 'red'].forEach(key => {
+                const info = certaintyInfo[key];
                 const li = document.createElement('li');
                 li.className = 'mb-2 d-flex align-items-center';
-                li.innerHTML = `<span style="height: 15px; width: 15px; background-color: var(--bs-${info.class.replace('btn-','')}); border-radius: 50%; display: inline-block; margin-right: 10px; flex-shrink: 0;"></span><div><small>${info.text}</small></div>`;
+                const color = info.class.includes('border') ? `var(--bs-${info.class.split('-')[1]})` : `var(--bs-${info.class.replace('btn-','')})`;
+                li.innerHTML = `<span style="height: 15px; width: 15px; background-color: ${color}; border-radius: 50%; display: inline-block; margin-right: 10px; flex-shrink: 0;"></span><div><small>${info.text}</small></div>`;
                 legendContainer.appendChild(li);
             });
             document.getElementById('legend').style.display = 'block';
@@ -149,7 +158,7 @@
             document.querySelectorAll('#time-picker .btn').forEach(otherBtn => {
                 if (otherBtn !== btn) {
                     otherBtn.disabled = false;
-                    otherBtn.className = 'btn btn-outline-primary';
+                    otherBtn.className = `btn btn-outline-primary ${marginClassMap[otherBtn.dataset.margin] || ''}`;
                     otherBtn.innerHTML = new Date(otherBtn.dataset.start).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
                 }
             });
@@ -180,7 +189,6 @@
                     btn.disabled = false;
                     document.getElementById('booking-form').style.display = 'block';
                 } else {
-                    // De knop blijft 'disabled' om aan te geven dat deze niet gekozen kan worden.
                     btn.disabled = true;
                 }
 
@@ -201,9 +209,11 @@
             if (times.length > 0) {
                 times.forEach(slot => {
                     const btn = document.createElement('button');
-                    btn.className = 'btn btn-outline-primary';
+                    const marginClass = marginClassMap[slot.marginCategory] || '';
+                    btn.className = `btn btn-outline-primary ${marginClass}`;
                     btn.textContent = new Date(slot.start).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
-                    btn.dataset.start = slot.start; // Sla de starttijd op voor het resetten
+                    btn.dataset.start = slot.start;
+                    btn.dataset.margin = slot.marginCategory;
                     btn.onclick = () => handleTimeSlotClick(slot, btn);
                     timePicker.appendChild(btn);
                 });

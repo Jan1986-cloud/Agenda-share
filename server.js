@@ -252,7 +252,11 @@ app.get('/get-availability', async (req, res) => {
             title: link.title,
             description: link.description,
             duration: link.duration,
-            initialSlots: slots.map(s => ({ start: s.start.toISOString(), end: s.end.toISOString() })),
+            initialSlots: slots.map(s => ({ 
+                start: s.start.toISOString(), 
+                end: s.end.toISOString(),
+                marginCategory: s.marginCategory 
+            })),
             availableDays,
             linkId,
         });
