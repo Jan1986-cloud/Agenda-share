@@ -51,6 +51,8 @@ export const createTables = async () => {
                 duration INTEGER NOT NULL,
                 buffer INTEGER NOT NULL,
                 availability JSONB NOT NULL,
+                request_count INTEGER DEFAULT 0,
+                window_start_time TIMESTAMPTZ DEFAULT NULL,
                 created_at TIMESTAMPTZ DEFAULT NOW()
             );
         `);
@@ -133,6 +135,23 @@ export const createTables = async () => {
         console.log('Migrated links table: added description column.');
     }
 
+    // Migration: Add planning horizon columns
+    const planningOffsetDaysColumn = await client.query(`
+        SELECT column_name FROM information_schema.columns WHERE table_name='links' AND column_name='planning_offset_days'
+    `);
+    if (planningOffsetDaysColumn.rows.length === 0) {
+        await client.query(`ALTER TABLE links ADD COLUMN planning_offset_days INTEGER NOT NULL DEFAULT 0`);
+        console.log('Migrated links table: added planning_offset_days column.');
+    }
+
+    const planningWindowDaysColumn = await client.query(`
+        SELECT column_name FROM information_schema.columns WHERE table_name='links' AND column_name='planning_window_days'
+    `);
+    if (planningWindowDaysColumn.rows.length === 0) {
+        await client.query(`ALTER TABLE links ADD COLUMN planning_window_days INTEGER NOT NULL DEFAULT 14`);
+        console.log('Migrated links table: added planning_window_days column.');
+    }
+
     await client.query(`
         CREATE TABLE IF NOT EXISTS appointments (
             id SERIAL PRIMARY KEY,
@@ -147,11 +166,26 @@ export const createTables = async () => {
         );
     `);
 
+    await client.query(`
+        CREATE TABLE IF NOT EXISTS travel_time_cache (
+            origin_city VARCHAR(255) NOT NULL,
+            destination_city VARCHAR(255) NOT NULL,
+            duration_seconds INTEGER NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            PRIMARY KEY (origin_city, destination_city)
+        );
+    `);
+
+    await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_travel_time_cache_origin 
+        ON travel_time_cache (origin_city);
+    `);
+    
     console.log('Tables created successfully or already exist.');
+
   } catch (err) {
     console.error('Error creating/migrating tables:', err);
   } finally {
     client.release();
   }
 };
-

@@ -1,8 +1,8 @@
 // test/availability-timezone.test.js
-import { calculateAvailability } from '../utils/availability-logic.js';
+import { calculateAvailability } from '../../utils/availability-logic.js';
 
 // stub reistijd (override voor elke test)
-const mockGetTravelTime = async () => 0;
+const mockGetTravelTime = async (origin, destination) => ({ duration: 0, status: 'OK', origin, destination });
 
 const today = new Date();
 const fixedTomorrow = new Date(
@@ -48,16 +48,18 @@ describe('calculateAvailability with Timezone and Travel Time', () => {
             include_travel_start: true,
             include_travel_end: false,
             timezone: 'America/New_York', // A timezone significantly different from UTC
+            planningOffsetDays: 1,
+            planningWindowDays: 1,
         };
 
         const options = {
-            link,
+            ...link, // Spread the link properties into the main options object
             busySlots: [],
             destinationAddress: 'New York Test Office',
             getTravelTime: mockGetTravelTime,
         };
 
-        const slots = await calculateAvailability({ link, getTravelTime: mockGetTravelTime, ...options });
+        const { slots } = await calculateAvailability(options);
 
         // --- Assertions ---
         expect(slots.length).toBeGreaterThan(0);
@@ -68,22 +70,20 @@ describe('calculateAvailability with Timezone and Travel Time', () => {
         // In FLEXIBEL mode, the first slot should start at 9:30 AM.
         const firstSlot = slots[0];
         
-        // The response format is now a localized string: "DD-MM-YYYY HH:mm:ss"
-        // We need to parse this to verify the time.
+        // The response format is now a Date object
         const expectedFirstSlotHour = 9;
         const expectedFirstSlotMinute = 30;
 
-        // Example expected format: "13-7-2025 09:30:00"
-        const timePart = firstSlot.start.split(' ')[1];
-        const [hour, minute] = timePart.split(':').map(Number);
+        // We need to check the hours and minutes in the correct timezone
+        const slotTimeInNY = new Date(firstSlot.start.toLocaleString('en-US', { timeZone: 'America/New_York' }));
 
-        expect([9,3]).toContain(hour);
-        expect(minute).toBe(expectedFirstSlotMinute);
+        expect(slotTimeInNY.getHours()).toBe(expectedFirstSlotHour);
+        expect(slotTimeInNY.getMinutes()).toBe(expectedFirstSlotMinute);
 
         // Verify that the date part of the string corresponds to the correct local date
         // For a test run in Europe, 'America/New_York' is several hours behind.
         // The UTC date of the slot should still be the 'fixedTomorrow' date.
-        const slotUtcDate = new Date(firstSlot.start_utc);
+        const slotUtcDate = firstSlot.start;
         expect(slotUtcDate.getUTCDate()).toBe(fixedTomorrow.getUTCDate());
         expect(slotUtcDate.getUTCMonth()).toBe(fixedTomorrow.getUTCMonth());
         expect(slotUtcDate.getUTCFullYear()).toBe(fixedTomorrow.getUTCFullYear());

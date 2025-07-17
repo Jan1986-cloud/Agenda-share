@@ -1,55 +1,57 @@
+// Bestand: utils/travel-time.js
 import 'dotenv/config';
 import fetch from 'node-fetch';
 
-// Definitieve FIX: Zorg ervoor dat de correcte environment variable wordt geladen.
-const KEY = process.env.GOOGLE_MAPS_API_KEY;
+const KEY = process.env.OPENROUTER_API_KEY;
 
 /**
- * Berekent de reistijd en retourneert een statusobject.
- * @param {string} origin - Het startadres.
- * @param {string} dest - Het bestemmingsadres.
- * @returns {Promise<{status: 'OK'|'ZERO_RESULTS'|'API_ERROR', duration: number|null}>}
+ * Berekent de reistijd tussen twee sets coördinaten met de OpenRouteService Directions API.
+ * @param {Array<number>} originCoords - De [lon, lat] van de oorsprong.
+ * @param {Array<number>} destCoords - De [lon, lat] van de bestemming.
+ * @returns {Promise<{status: 'OK'|'API_ERROR'|'ZERO_RESULTS', duration: number|null}>}
  */
-export async function getTravelTime(origin, dest) {
-  // Essentiële controle: is de API-sleutel überhaupt geladen?
-  if (!KEY) {
-    console.error('FATAL ERROR: GOOGLE_MAPS_API_KEY is niet ingesteld of niet gevonden. De reistijdberekening kan niet worden uitgevoerd.');
-    return { status: 'API_ERROR', duration: null };
-  }
+export async function getTravelTime(originCoords, destCoords) {
+    // Als start- en eindpunt (bijna) gelijk zijn, is de reistijd 0.
+    if (!originCoords || !destCoords) return { status: 'API_ERROR', duration: null, origin: originCoords, destination: destCoords };
+    if (originCoords.join(',') === destCoords.join(',')) return { status: 'OK', duration: 0, origin: originCoords, destination: destCoords };
 
-  if (!origin || !dest || origin === dest) {
-    return { status: 'OK', duration: 0 };
-  }
-
-  const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(
-    origin
-  )}&destinations=${encodeURIComponent(dest)}&key=${KEY}&mode=driving`;
-  
-  try {
-    const r = await fetch(url);
-    if (!r.ok) {
-      console.error(`Google Maps API HTTP error: ${r.status}`);
-      return { status: 'API_ERROR', duration: null };
-    }
-    const j = await r.json();
-    
-    // Controleer de overkoepelende status van het antwoord
-    if (j.status !== 'OK') {
-      console.warn(`Google Maps API returned top-level error: ${j.status} for ${origin} -> ${dest}`);
-      return { status: j.status, duration: null };
+    if (!KEY) {
+        console.error('FATAL ERROR: OPENROUTER_API_KEY is niet ingesteld.');
+        return { status: 'API_ERROR', duration: null, origin: originCoords, destination: destCoords };
     }
 
-    const element = j.rows?.[0]?.elements?.[0];
+    const url = `https://api.openrouteservice.org/v2/directions/driving-car?start=${originCoords.join(',')}&end=${destCoords.join(',')}`;
 
-    // Controleer de status van het specifieke route-element
-    if (element?.status === 'OK') {
-      return { status: 'OK', duration: element.duration.value };
-    } else {
-      console.warn(`Could not calculate travel time for ${origin} -> ${dest}. Element status: ${element?.status}`);
-      return { status: element?.status || 'ZERO_RESULTS', duration: null };
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+                'Authorization': KEY
+            }
+        });
+
+        if (!response.ok) {
+            // Als de API een error geeft (bv. 404, 500), log dit en geef een fout terug.
+            console.error(`Error from OpenRouteService API: ${response.status} ${response.statusText}`);
+            const errorBody = await response.text();
+            console.error('Error body:', errorBody);
+            return { status: 'API_ERROR', duration: null, origin: originCoords, destination: destCoords };
+        }
+        
+        const data = await response.json();
+
+        // Controleer of er een route is gevonden.
+        if (data.features && data.features.length > 0 && data.features[0].properties.summary) {
+            const durationInSeconds = data.features[0].properties.summary.duration;
+            return { status: 'OK', duration: Math.round(durationInSeconds), origin: originCoords, destination: destCoords };
+        }
+        
+        // Geen route gevonden tussen de punten.
+        return { status: 'ZERO_RESULTS', duration: null, origin: originCoords, destination: destCoords };
+
+    } catch (error) {
+        console.error('Error fetching travel time from OpenRouteService:', error);
+        return { status: 'API_ERROR', duration: null, origin: originCoords, destination: destCoords };
     }
-  } catch (error) {
-    console.error("Fatal error during fetch in getTravelTime:", error);
-    return { status: 'API_ERROR', duration: null };
-  }
 }

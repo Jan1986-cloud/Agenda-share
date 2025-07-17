@@ -1,107 +1,102 @@
 // Bestand: utils/availability-logic.js
-// Definitieve implementatie die de "sandwich"-logica voor reistijd aan beide kanten van een afspraak correct afhandelt.
+// Nieuwe, vereenvoudigde implementatie voor de "on-demand" architectuur.
+// Deze functie berekent alleen de ruwe, beschikbare gaten zonder reistijd.
 
 export async function calculateAvailability(options) {
     const {
-        availabilityRules, busySlots = [], appointmentDuration, buffer,
-        startAddress, destinationAddress, maxTravelTime, getTravelTime,
+        availability: availabilityRules,
+        busySlots = [],
+        duration: appointmentDuration,
+        planningOffsetDays = 0,
+        planningWindowDays = 14,
     } = options;
 
     const appointmentDurationMs = appointmentDuration * 60000;
-    const bufferMs = buffer * 60000;
     const now = new Date();
-
-    const roundToNext15Minutes = (date) => {
-        const d = new Date(date);
-        const minutes = d.getUTCMinutes();
-        if (minutes % 15 !== 0) d.setUTCMinutes(minutes + (15 - (minutes % 15)), 0, 0);
-        return d;
-    };
-
-    const allBusySlotsSorted = busySlots
-        .map(s => ({ ...s, start: new Date(s.start), end: new Date(s.end), location: s.location || startAddress }))
-        .sort((a, b) => a.start.getTime() - b.start.getTime());
-
     const finalSlots = [];
 
-    for (let d = 0; d <= 7; d++) {
-        const currentDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + d));
+    // Bepaal de dagen die we moeten controleren
+    const daysToIterate = Array.from({ length: planningWindowDays }, (_, i) => {
+        const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + planningOffsetDays + i));
+        return d;
+    });
+
+    for (const currentDay of daysToIterate) {
         const dayOfWeek = currentDay.getUTCDay();
         const rule = availabilityRules.find(r => r.dayOfWeek === dayOfWeek);
-        if (!rule) continue;
+        if (!rule || !rule.startTime || !rule.endTime) {
+            continue;
+        }
 
         const [startHour, startMinute] = rule.startTime.split(':').map(Number);
         const [endHour, endMinute] = rule.endTime.split(':').map(Number);
 
         const dayStart = new Date(Date.UTC(currentDay.getUTCFullYear(), currentDay.getUTCMonth(), currentDay.getUTCDate(), startHour, startMinute));
         const dayEnd = new Date(Date.UTC(currentDay.getUTCFullYear(), currentDay.getUTCMonth(), currentDay.getUTCDate(), endHour, endMinute));
+
+        // Essentiële validatie: sla corrupte regels over.
+        if (isNaN(dayStart.getTime()) || isNaN(dayEnd.getTime())) {
+            console.warn(`Ongeldige tijd gevonden in beschikbaarheidsregel voor dag ${dayOfWeek}, regel wordt overgeslagen. Regel:`, rule);
+            continue;
+        }
+
+        // Verzamel alle "grenzen" op een dag: start/einde werkdag en start/einde afspraken.
+        const timeBoundaries = [dayStart.getTime(), dayEnd.getTime()];
+        busySlots.forEach(slot => {
+            const slotDate = new Date(slot.start);
+            if (slotDate.getUTCFullYear() === currentDay.getUTCFullYear() &&
+                slotDate.getUTCMonth() === currentDay.getUTCMonth() &&
+                slotDate.getUTCDate() === currentDay.getUTCDate()) {
+                timeBoundaries.push(slot.start.getTime());
+                timeBoundaries.push(slot.end.getTime());
+            }
+        });
         
-        let cursor = roundToNext15Minutes(new Date(Math.max(now.getTime(), dayStart.getTime())));
+        // Sorteer en ontdubbel de grenzen om schone "gaten" te krijgen.
+        const uniqueBoundaries = [...new Set(timeBoundaries)].sort((a, b) => a - b);
 
-        while (cursor.getTime() < dayEnd.getTime()) {
-            const potentialStart = new Date(cursor.getTime());
-            
-            // --- DE "SANDWICH" LOGICA ---
-            const lastAppointmentBefore = allBusySlotsSorted.filter(s => s.end.getTime() <= potentialStart.getTime()).pop();
-            const nextAppointmentAfter = allBusySlotsSorted.find(s => s.start.getTime() >= potentialStart.getTime());
+        // Loop door elk gat.
+        for (let i = 0; i < uniqueBoundaries.length - 1; i++) {
+            const gapStartMs = uniqueBoundaries[i];
+            let gapEndMs = uniqueBoundaries[i + 1];
 
-            // 1. Check of het slot zelf overlapt met een bestaande afspraak
-            if (nextAppointmentAfter && potentialStart.getTime() + appointmentDurationMs > nextAppointmentAfter.start.getTime()) {
-                cursor = roundToNext15Minutes(new Date(nextAppointmentAfter.end.getTime() + bufferMs));
+            // Zorg ervoor dat het gat niet buiten de werkdag valt.
+            gapEndMs = Math.min(gapEndMs, dayEnd.getTime());
+
+            // Controleer of dit "gat" niet binnen een bestaande afspraak valt.
+            const isOverlapping = busySlots.some(slot => 
+                (gapStartMs >= slot.start.getTime() && gapStartMs < slot.end.getTime()) ||
+                (gapEndMs > slot.start.getTime() && gapEndMs <= slot.end.getTime())
+            );
+
+            if (isOverlapping) {
                 continue;
             }
-            
-            const potentialEnd = new Date(potentialStart.getTime() + appointmentDurationMs);
-            if (potentialEnd > dayEnd) {
-                break;
+
+            // Als het gat te klein is voor de afspraak, sla het over.
+            if (gapEndMs - gapStartMs < appointmentDurationMs) {
+                continue;
             }
 
-            // 2. Bepaal de reis-eindpunten
-            const origin = lastAppointmentBefore ? (lastAppointmentBefore.location || startAddress) : startAddress;
-            const destinationForNextTrip = nextAppointmentAfter ? (nextAppointmentAfter.location || startAddress) : startAddress;
+            // Start de cursor aan het begin van het gat, maar niet in het verleden.
+            let cursorTime = Math.max(gapStartMs, now.getTime());
 
-            // 3. Haal BEIDE reistijden op
-            const travelToResult = await getTravelTime(origin, destinationAddress);
-            const travelFromResult = await getTravelTime(destinationAddress, destinationForNextTrip);
-            
-            const travelIsKnown = travelToResult.status === 'OK' && travelFromResult.status === 'OK';
+            // Rond de cursor af naar boven, naar het volgende kwartier voor schone slots.
+            const intervalMs = 15 * 60 * 1000;
+            cursorTime = Math.ceil(cursorTime / intervalMs) * intervalMs;
 
-            if (travelIsKnown) {
-                const travelToMs = travelToResult.duration * 1000;
-                const travelFromMs = travelFromResult.duration * 1000;
-                
-                const earliestPossibleStart = lastAppointmentBefore ? (lastAppointmentBefore.end.getTime() + bufferMs) : dayStart.getTime();
-                const latestPossibleEnd = nextAppointmentAfter ? (nextAppointmentAfter.start.getTime() - bufferMs) : dayEnd.getTime();
-                
-                const requiredStartTime = earliestPossibleStart + travelToMs;
-                const requiredEndTime = potentialEnd.getTime() + travelFromMs;
+            // Blijf slots toevoegen in het gat totdat het niet meer past.
+            while (cursorTime + appointmentDurationMs <= gapEndMs) {
+                const potentialStart = new Date(cursorTime);
+                const potentialEnd = new Date(cursorTime + appointmentDurationMs);
+                finalSlots.push({ start: potentialStart, end: potentialEnd });
 
-                if (potentialStart.getTime() >= requiredStartTime && requiredEndTime <= latestPossibleEnd) {
-                    finalSlots.push({ start: potentialStart, end: potentialEnd, certainty: 'green' });
-                }
-            } else {
-                // Als reistijd onbekend is, val terug op de marge-logica
-                const timeBeforeMs = lastAppointmentBefore 
-                    ? potentialStart.getTime() - (lastAppointmentBefore.end.getTime() + bufferMs)
-                    : Infinity;
-                
-                const timeAfterMs = nextAppointmentAfter
-                    ? nextAppointmentAfter.start.getTime() - (potentialEnd.getTime() + bufferMs)
-                    : Infinity;
-                
-                const totalMarginMs = Math.min(timeBeforeMs, timeAfterMs);
-
-                let certainty;
-                if (totalMarginMs >= 3600000) certainty = 'yellow';
-                else if (totalMarginMs >= 1800000) certainty = 'orange';
-                else certainty = 'red';
-                
-                finalSlots.push({ start: potentialStart, end: potentialEnd, certainty });
+                // Verplaats de cursor naar het volgende slot.
+                cursorTime += intervalMs;
             }
-
-            cursor.setUTCMinutes(cursor.getUTCMinutes() + 15);
         }
     }
-    
-    return finalSlots;
+
+    // Geef de ruwe slots terug. De reistijd-check gebeurt on-demand.
+    return { slots: finalSlots, diagnosticLog: [] };
 }

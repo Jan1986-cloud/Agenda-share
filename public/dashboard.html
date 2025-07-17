@@ -70,6 +70,16 @@
                     </div>
                     <hr class="my-4" />
                     <h6 class="mb-3">Planning Instellingen</h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="planning_offset_days" class="form-label">Start planning over (dagen)</label>
+                            <input type="number" class="form-control" id="planning_offset_days" value="0" />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="planning_window_days" class="form-label">Toon beschikbaarheid voor (dagen)</label>
+                            <input type="number" class="form-control" id="planning_window_days" value="14" />
+                        </div>
+                    </div>
                     <div class="row">
                         <div class="col-md-6">
                             <label for="maxTravelTime" class="form-label">Maximale reistijd (minuten)</label>
@@ -288,6 +298,8 @@
                 workdayMode: document.querySelector('input[name="workdayMode"]:checked').value,
                 includeTravelStart: document.getElementById('includeTravelStart').checked,
                 includeTravelEnd: document.getElementById('includeTravelEnd').checked,
+                planning_offset_days: document.getElementById('planning_offset_days').value,
+                planning_window_days: document.getElementById('planning_window_days').value,
             };
 
             const url = linkId ? `/api/links/${linkId}` : '/api/links';
@@ -348,6 +360,8 @@
                 document.getElementById(`workday-${link.workday_mode?.toLowerCase() || 'fixed'}`).checked = true;
                 document.getElementById('includeTravelStart').checked = link.include_travel_start;
                 document.getElementById('includeTravelEnd').checked = link.include_travel_end;
+                document.getElementById('planning_offset_days').value = link.planning_offset_days || 0;
+                document.getElementById('planning_window_days').value = link.planning_window_days || 14;
 
                 if (document.getElementById('workday-flexible').checked) {
                     document.getElementById('flexible-options').style.display = 'flex';

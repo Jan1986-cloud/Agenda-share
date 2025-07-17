@@ -84,3 +84,63 @@ De applicatie transformeert een handmatig, complex proces in een geautomatiseerd
 *   **Optimalisatie:** Voorkomt dubbele boekingen en onrealistische planningen door reistijd mee te nemen.
 *   **Professionaliteit:** Biedt klanten een soepele, moderne en duidelijke manier om een afspraak te maken.
 *   **Risicobeheer:** Maakt de onvermijdelijke onzekerheid van reistijden beheersbaar en transparant.
+
+---
+### Sessie Overzicht & Applicatie Evolutie
+
+#### Chronologisch Overzicht van Wijzigingen
+
+Dit overzicht is gebaseerd op de belangrijkste functionele blokken die we tijdens onze sessie hebben geïmplementeerd en gecorrigeerd.
+
+| Datum/Tijd (Sessie) | Bestand(en) | Wijzigingen | Omschrijving |
+| :--- | :--- | :--- | :--- |
+| Start | `utils/availability-logic.js`, `db.js` | 2x `replace` | Interval verhoogd naar 30 min; nieuwe DB-kolommen `request_count` & `window_start_time` toegevoegd. |
+| Sessie | `server.js` | 1x `replace` | Implementatie van een "rate limiting" mechanisme op de `/get-availability` route. |
+| Sessie | `utils/availability-logic.js`, `server.js`, `public/schedule.html` | 3x `replace`/`write` | Toevoegen van het diagnostische paneel om API-calls te visualiseren. |
+| Sessie | `utils/availability-logic.js` | 1x `write_file` | **Grote Refactor:** Vervangen van de "brute-force" engine door de "Gap-Based" engine voor performance. |
+| Sessie | `utils/availability-logic.js` | 1x `write_file` | **Optimalisatie:** De "Gap-Based" engine verder verbeterd om reistijd slechts één keer per gat te berekenen. |
+| Sessie | `db.js`, `server.js`, `utils/availability-logic.js`, `public/dashboard.html` | 5x `replace` | Implementatie van de flexibele planningshorizon (offset & window dagen). |
+| Sessie | `utils/availability-logic.js`, `server.js`, `public/schedule.html` | 3x `write`/`replace` | **Grote Architectuurwijziging:** Implementatie van het "On-Demand" laadmodel. |
+| Sessie | `server.js` | 1x `replace` | Bugfix: `getCoordinatesForAddress` robuuster gemaakt tegen `undefined` locaties. |
+| Sessie | `server.js` | 1x `replace` | Bugfix: `schedule.html` route gecorrigeerd om 404-fout te voorkomen. |
+| Sessie | `db.js` | 1x `write_file` | Bugfix: `SyntaxError` in `db.js` opgelost door migratielogica te verplaatsen. |
+| Sessie | `server.js` | 2x `replace` | Bugfix: `getTravelTimeWithCoords` robuuster gemaakt in beide routes. |
+| Sessie | `server.js` | 1x `replace` | Bugfix: `timeMin` correct ingesteld voor Google Calendar API call om reeds gestarte afspraken te vinden. |
+| Einde | `server.js` | 1x `replace` | Bugfix: `auth` client correct doorgegeven aan `getBusySlots` in de "on-demand" route. |
+
+---
+
+### De Evolutie van de Applicatie
+
+#### 1. Het Originele Plan: De Intelligente Agenda
+
+We zijn gestart met een helder en krachtig doel: een applicatie bouwen die het plannen van afspraken automatiseert. De kernfunctionaliteit was het genereren van een deelbare link. Wanneer een klant deze link opent en zijn adres invoert, zou de applicatie:
+1.  De agenda van de professional raadplegen.
+2.  De reistijd naar de klant berekenen.
+3.  Alleen de tijdsloten tonen die groot genoeg zijn voor de afspraak, inclusief de benodigde reistijd ervoor en erna.
+
+#### 2. De Realiteit en de Routecorrecties
+
+Tijdens de ontwikkeling stuitten we op een aantal fundamentele uitdagingen die ons dwongen de architectuur te herzien en te verbeteren:
+
+*   **Het Performance & Kostenprobleem:** De eerste versie van de reken-engine was "brute-force" en controleerde elke 30 minuten van de dag. Dit resulteerde in een enorm aantal API-calls, wat de applicatie traag en duur maakte.
+    *   **Onze Oplossing:** We hebben de motor volledig herbouwd naar een **"Gap-Based" engine**. Deze identificeert eerst de lege "gaten" in de agenda en voert alleen voor die gaten de berekeningen uit. Dit reduceerde het aantal API-calls drastisch.
+
+*   **Het "Blinde Vlek" Probleem:** We ontdekten dat afspraken die al waren begonnen, niet werden meegenomen in de berekening, waardoor er onterecht beschikbaarheid werd getoond.
+    *   **Onze Oplossing:** We hebben de manier waarop we Google om data vragen aangepast, door altijd vanaf het begin van de dag te kijken in plaats van vanaf "nu".
+
+*   **Het Robuustheidsprobleem:** De applicatie crashte als er een afspraak in de agenda stond zonder locatie, of als een externe API (zoals de geocoder) een fout gaf.
+    *   **Onze Oplossing:** We hebben de code "kogelvrij" gemaakt door overal robuuste foutafhandeling en data-validatie toe te voegen. De applicatie crasht niet meer op ongeldige data, maar handelt de fout correct af.
+
+#### 3. De Huidige Architectuur: Een Robuust "On-Demand" Systeem
+
+De problemen die we onderweg tegenkwamen, hebben geleid tot een veel geavanceerder en slimmer eindproduct dan het originele plan. De huidige architectuur is een **"on-demand" tweetrapsraket**:
+
+1.  **Snelle Eerste Weergave:** Wanneer een klant de link opent, doet de server een zeer snelle, beperkte berekening. Het toont **direct alle mogelijke dagen** waarop een afspraak zou kunnen vallen, maar berekent de daadwerkelijke reistijd en tijdsloten voor **alleen de eerste paar dagen**. Dit geeft de gebruiker onmiddellijk een overzicht en een werkende interface.
+
+2.  **Berekening op Aanvraag:** De overige dagen in de kalender zijn gemarkeerd als "nog niet berekend". Pas wanneer de gebruiker op zo'n latere dag klikt, stuurt de browser een gerichte aanvraag naar de server: "Bereken nu de tijden voor *deze specifieke dag*." De server voert de reistijdberekening uit voor alleen die dag en stuurt de resultaten terug, die vervolgens in de kalender worden getoond.
+
+Dit eindresultaat is superieur aan het originele plan omdat het:
+*   **Extreem Snel** is voor de gebruiker.
+*   **Zeer Kosten-efficiënt** is door het aantal API-calls te minimaliseren.
+*   **Robuust en Veerkrachtig** is en niet crasht door onverwachte data of externe fouten.

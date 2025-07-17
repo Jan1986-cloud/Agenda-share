@@ -4,33 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Plan een afspraak</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <style>
-        body {
-            background-color: #f8f9fa;
-        }
-
-        .container {
-            max-width: 700px;
-        }
-
-        .card {
-            border-radius: 0.75rem;
-        }
-
-        .slot-picker {
-            height: 300px;
-            overflow-y: auto;
-            border: 1px solid #dee2e6;
-            border-radius: 0.5rem;
-            padding: 0.5rem;
-        }
-
-            .slot-picker .btn {
-                width: 100%;
-                margin-bottom: 0.5rem;
-            }
+        body { background-color: #f8f9fa; }
+        .container { max-width: 700px; }
+        .card { border-radius: 0.75rem; }
+        .slot-picker { height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.5rem; padding: 0.5rem; }
+        .slot-picker .btn { width: 100%; margin-bottom: 0.5rem; }
+        .slot-picker .btn.verifying .spinner-border { width: 1rem; height: 1rem; }
     </style>
 </head>
 <body>
@@ -38,100 +19,70 @@
         <div class="card shadow-sm">
             <div class="card-body p-5">
                 <div id="address-view">
-                    <h1 id="appointment-title-main" class="card-title text-center mb-4">
-                        Plan uw afspraak
-                    </h1>
+                    <h1 id="appointment-title-main" class="card-title text-center mb-4">Plan uw afspraak</h1>
                     <p id="appointment-description" class="text-center"></p>
-                    <p id="appointment-creator" class="text-center text-muted small"></p>
-                    <p class="text-center text-muted mb-4">
-                        Voer uw adres in om de reistijd te berekenen en beschikbare tijden
-                        te zien.
-                    </p>
+                    <p class="text-center text-muted mb-4">Voer uw adres in om de reistijd te berekenen en beschikbare tijden te zien.</p>
                     <div class="mb-3">
                         <label for="destinationAddress" class="form-label fs-5">Uw afspraakadres</label>
-                        <input type="text"
-                               class="form-control form-control-lg"
-                               id="destinationAddress"
-                               placeholder="Begin met typen..."
-                               required />
+                        <input type="text" class="form-control form-control-lg" id="destinationAddress" placeholder="Begin met typen..." required />
                     </div>
                     <div class="d-grid">
-                        <button id="check-availability-btn"
-                                class="btn btn-primary btn-lg">
-                            Toon beschikbare tijden
-                        </button>
+                        <button id="check-availability-btn" class="btn btn-primary btn-lg">Toon beschikbare tijden</button>
                     </div>
                 </div>
 
                 <div id="loading-view" style="display: none" class="text-center">
-                    <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Laden...</span>
-                    </div>
+                    <div class="spinner-border" role="status"><span class="visually-hidden">Laden...</span></div>
                     <p class="mt-3">Beschikbaarheid wordt berekend...</p>
                 </div>
 
                 <div id="booking-view" style="display: none">
                     <h2 id="appointment-title-booking" class="text-center mb-4"></h2>
-                    <p class="text-center text-muted mb-4">
-                        Kies een dag en een tijdstip.
-                    </p>
+                    <p class="text-center text-muted mb-4">Kies een dag en een tijdstip. Klik op een tijd om de reistijd te controleren.</p>
                     <div class="row">
                         <div class="col-md-6">
                             <h3 class="fs-5 text-center mb-3">Kies een dag</h3>
-                            <div id="day-picker" class="slot-picker">
-                            </div>
+                            <div id="day-picker" class="slot-picker"></div>
                         </div>
                         <div class="col-md-6">
                             <h3 class="fs-5 text-center mb-3">Kies een tijd</h3>
-                            <div id="time-picker" class="slot-picker">
-                            </div>
+                            <div id="time-picker" class="slot-picker"></div>
                         </div>
                     </div>
                     
-                    <!-- Legenda voor kleuren -->
                     <div id="legend" class="mt-4 p-3 bg-light border rounded" style="display: none;">
                         <h4 class="fs-6 mb-3">Uitleg kleuren</h4>
-                        <ul class="list-unstyled mb-0">
-                            <!-- Dynamisch gevuld door JavaScript -->
-                        </ul>
+                        <ul class="list-unstyled mb-0"></ul>
+                    </div>
+
+                    <div id="diagnostic-panel" class="mt-4" style="display: none;">
+                        <h4 class="fs-6">API Call Diagnostiek</h4>
+                        <div class="table-responsive" style="max-height: 200px;">
+                            <table class="table table-sm table-bordered">
+                                <thead><tr><th>Van</th><th>Naar</th><th>Status</th><th>Duur (s)</th></tr></thead>
+                                <tbody id="diagnostic-table-body"></tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <form id="booking-form" style="display: none" class="mt-4">
                         <h3 class="fs-5 mb-3">Bevestig uw gegevens</h3>
-                        <div class="mb-3">
-                            <label for="name" class="form-label">Uw naam</label>
-                            <input type="text" id="name" class="form-control" required />
-                        </div>
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Uw e-mailadres</label>
-                            <input type="email" id="email" class="form-control" required />
-                        </div>
-                        <div class="mb-3">
-                            <label for="phone" class="form-label">Uw telefoonnummer</label>
-                            <input type="tel" id="phone" class="form-control" required />
-                        </div>
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-success btn-lg">
-                                Afspraak bevestigen
-                            </button>
-                        </div>
+                        <div class="mb-3"><label for="name" class="form-label">Uw naam</label><input type="text" id="name" class="form-control" required /></div>
+                        <div class="mb-3"><label for="email" class="form-label">Uw e-mailadres</label><input type="email" id="email" class="form-control" required /></div>
+                        <div class="mb-3"><label for="phone" class="form-label">Uw telefoonnummer</label><input type="tel" id="phone" class="form-control" required /></div>
+                        <div class="d-grid"><button type="submit" class="btn btn-success btn-lg">Afspraak bevestigen</button></div>
                     </form>
                 </div>
 
                 <div id="confirmation-view" style="display: none" class="text-center">
                     <h2 class="text-success mb-3">Afspraak bevestigd!</h2>
-                    <p>
-                        U ontvangt een bevestiging per e-mail met de details van uw
-                        afspraak.
-                    </p>
+                    <p>U ontvangt een bevestiging per e-mail met de details van uw afspraak.</p>
                 </div>
 
                 <div id="error-view" style="display: none" class="text-center">
                     <h2 class="text-danger mb-3">Er is iets misgegaan</h2>
                     <p id="error-message"></p>
-                    <button class="btn btn-primary" onclick="location.reload()">
-                        Probeer opnieuw
-                    </button>
+                    <button class="btn btn-primary" onclick="location.reload()">Probeer opnieuw</button>
                 </div>
             </div>
         </div>
@@ -143,12 +94,14 @@
         const params = new URLSearchParams(window.location.search);
         const linkId = params.get('linkId');
         let selectedSlot = null;
-        let finalSlotsByDay = new Map();
+        let slotsByDay = new Map();
+        let destinationAddress = '';
+
         const certaintyInfo = {
-            green:  { class: 'btn-success', color: '#198754', icon: 'bi-check-circle-fill', text: 'Reistijd is berekend. Deze afspraak staat als een huis.' },
-            grey:   { class: 'btn-secondary', color: '#6c757d', icon: 'bi-exclamation-triangle-fill', text: 'Reistijd onbekend, maar er is een marge van >1 uur. Vraag eventueel om bevestiging bij de planner.' },
-            orange: { class: 'btn-warning', color: '#ffc107', icon: 'bi-exclamation-triangle-fill', text: 'Reistijd onbekend, marge is 30-60 min. Afspraak onder voorbehoud, vraag om bevestiging.' },
-            red:    { class: 'btn-danger',  color: '#dc3545', icon: 'bi-exclamation-octagon-fill', text: 'Reistijd onbekend en <30 min. marge. Hoog risico. Alleen boeken als u zeker weet dat er geen reistijd nodig is vanaf de vorige afspraak.' },
+            green:  { class: 'btn-success', text: 'Reistijd is berekend. Deze afspraak is bevestigd.' },
+            grey:   { class: 'btn-secondary', text: 'Reistijd onbekend, marge is >1 uur. Afspraak onder voorbehoud.' },
+            yellow: { class: 'btn-warning', text: 'Reistijd onbekend, marge is 30-60 min. Afspraak onder voorbehoud.' },
+            red:    { class: 'btn-danger',  text: 'Niet beschikbaar. De benodigde reistijd past niet of de marge is te klein.' },
         };
 
         function switchView(viewId) {
@@ -161,148 +114,167 @@
             document.getElementById('error-message').textContent = message;
             switchView('error-view');
         }
-        
+
         function displayLegend() {
             const legendContainer = document.querySelector('#legend ul');
-            legendContainer.innerHTML = ''; // Leegmaken voor het geval dat
-            
-            // Gebruik een vaste, correcte volgorde voor de legenda
-            ['green', 'grey', 'orange', 'red'].forEach(key => {
-                const info = certaintyInfo[key];
-                if (!info) return;
-
+            legendContainer.innerHTML = '';
+            Object.entries(certaintyInfo).forEach(([key, info]) => {
                 const li = document.createElement('li');
                 li.className = 'mb-2 d-flex align-items-center';
-                
-                const colorDot = document.createElement('span');
-                colorDot.style.height = '15px';
-                colorDot.style.width = '15px';
-                colorDot.style.backgroundColor = info.color;
-                colorDot.style.borderRadius = '50%';
-                colorDot.style.display = 'inline-block';
-                colorDot.style.marginRight = '10px';
-                colorDot.style.flexShrink = '0';
-
-                const textDiv = document.createElement('div');
-                textDiv.innerHTML = `<small>${info.text}</small>`;
-
-                li.appendChild(colorDot);
-                li.appendChild(textDiv);
+                li.innerHTML = `<span style="height: 15px; width: 15px; background-color: var(--bs-${info.class.replace('btn-','')}); border-radius: 50%; display: inline-block; margin-right: 10px; flex-shrink: 0;"></span><div><small>${info.text}</small></div>`;
                 legendContainer.appendChild(li);
             });
             document.getElementById('legend').style.display = 'block';
         }
 
-        function groupSlotsByDay(rawSlots) {
-            const slotsByDay = new Map();
-            rawSlots.forEach(slot => {
-                const dt = new Date(slot.start);
-                const dayKey = dt.toISOString().split('T')[0];
-                if (!slotsByDay.has(dayKey)) {
-                    slotsByDay.set(dayKey, []);
-                }
-                const localTime = dt.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
-                slotsByDay.get(dayKey).push({ 
-                    local: localTime, 
-                    utc: slot.start, 
-                    certainty: slot.certainty 
-                });
+        function updateDiagnostics(diagnosticLog) {
+            const diagnosticTableBody = document.getElementById('diagnostic-table-body');
+            if (!diagnosticLog || diagnosticLog.length === 0) return;
+            
+            diagnosticLog.forEach(log => {
+                const row = diagnosticTableBody.insertRow();
+                row.insertCell().textContent = log.origin;
+                row.insertCell().textContent = log.destination;
+                const statusCell = row.insertCell();
+                statusCell.textContent = log.status;
+                statusCell.style.fontWeight = 'bold';
+                statusCell.style.color = log.status === 'OK' ? 'green' : 'red';
+                row.insertCell().textContent = log.duration ?? 'N/A';
             });
-            for (const dayKey of slotsByDay.keys()) {
-                slotsByDay.get(dayKey).sort((a, b) => a.local.localeCompare(b.local));
-            }
-            return slotsByDay;
+            document.getElementById('diagnostic-panel').style.display = 'block';
         }
 
-        function displayTimes(dayKey) {
+        async function handleTimeSlotClick(slot, btn) {
+            // Reset de status van andere knoppen
+            document.querySelectorAll('#time-picker .btn').forEach(otherBtn => {
+                if (otherBtn !== btn) {
+                    otherBtn.disabled = false;
+                    otherBtn.className = 'btn btn-outline-primary';
+                    otherBtn.innerHTML = new Date(otherBtn.dataset.start).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+                }
+            });
+
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Controleren...`;
+            document.getElementById('booking-form').style.display = 'none';
+            
+            try {
+                const response = await fetch('/verify-slot', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ linkId, destinationAddress, slotStart: slot.start }),
+                });
+
+                if (!response.ok) throw new Error('Verificatie van het slot is mislukt.');
+                
+                const data = await response.json();
+                updateDiagnostics(data.diagnostic);
+
+                const certainty = certaintyInfo[data.certainty] || certaintyInfo.red;
+                btn.className = `btn ${certainty.class}`;
+                btn.innerHTML = new Date(slot.start).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+
+                if (data.isViable) {
+                    selectedSlot = slot;
+                    btn.classList.add('active');
+                    btn.disabled = false;
+                    document.getElementById('booking-form').style.display = 'block';
+                } else {
+                    // De knop blijft 'disabled' om aan te geven dat deze niet gekozen kan worden.
+                    btn.disabled = true;
+                }
+
+            } catch (error) {
+                console.error('Fout bij slot verificatie:', error);
+                btn.className = 'btn btn-warning';
+                btn.innerHTML = 'Verificatie mislukt';
+                btn.disabled = false;
+            }
+        }
+
+        function renderTimeSlots(dayKey) {
             const timePicker = document.getElementById('time-picker');
             timePicker.innerHTML = '';
-            const times = finalSlotsByDay.get(dayKey) || [];
-
-            document.querySelectorAll('#day-picker .btn').forEach(b => b.classList.remove('btn-primary', 'active'));
-            document.querySelector(`#day-picker .btn[data-day-key="${dayKey}"]`).classList.add('btn-primary', 'active');
+            document.getElementById('booking-form').style.display = 'none';
+            const times = slotsByDay.get(dayKey) || [];
 
             if (times.length > 0) {
                 times.forEach(slot => {
                     const btn = document.createElement('button');
-                    const certainty = certaintyInfo[slot.certainty] || certaintyInfo.red; // Fallback naar rood
-                    
-                    btn.className = `btn ${certainty.class} d-flex justify-content-between align-items-center`;
-                    btn.title = certainty.text;
-                    
-                    const timeSpan = document.createElement('span');
-                    timeSpan.textContent = slot.local;
-                    
-                    const icon = document.createElement('i');
-                    icon.className = `bi ${certainty.icon}`;
-
-                    btn.appendChild(timeSpan);
-                    btn.appendChild(icon);
-
-                    btn.onclick = () => {
-                        selectedSlot = slot;
-                        document.querySelectorAll('#time-picker .btn').forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        document.getElementById('booking-form').style.display = 'block';
-                        
-                        const confirmBtn = document.querySelector('#booking-form button[type="submit"]');
-                        if (slot.certainty !== 'green') {
-                            confirmBtn.textContent = 'Bevestig (onder voorbehoud)';
-                            confirmBtn.classList.remove('btn-success');
-                            confirmBtn.classList.add('btn-warning');
-                        } else {
-                            confirmBtn.textContent = 'Afspraak bevestigen';
-                            confirmBtn.classList.remove('btn-warning');
-                            confirmBtn.classList.add('btn-success');
-                        }
-                    };
+                    btn.className = 'btn btn-outline-primary';
+                    btn.textContent = new Date(slot.start).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+                    btn.dataset.start = slot.start; // Sla de starttijd op voor het resetten
+                    btn.onclick = () => handleTimeSlotClick(slot, btn);
                     timePicker.appendChild(btn);
                 });
             } else {
-                 timePicker.innerHTML = '<p class="text-center text-muted">Geen tijden beschikbaar op deze dag.</p>';
+                timePicker.innerHTML = '<p class="text-center text-muted">Geen tijden beschikbaar op deze dag.</p>';
             }
         }
 
+        function handleDayClick(dayKey, dayButton) {
+            document.querySelectorAll('#day-picker .btn').forEach(b => b.classList.remove('active'));
+            dayButton.classList.add('active');
+            renderTimeSlots(dayKey);
+        }
+
+        function renderDayPicker(availableDays, initialSlots) {
+            const dayPicker = document.getElementById('day-picker');
+            dayPicker.innerHTML = '';
+            slotsByDay = groupSlotsByDay(initialSlots);
+
+            availableDays.forEach(dayKey => {
+                const btn = document.createElement('button');
+                const hasSlots = slotsByDay.has(dayKey) && slotsByDay.get(dayKey).length > 0;
+                btn.className = `btn day-btn ${hasSlots ? 'btn-outline-primary' : 'btn-outline-secondary'}`;
+                const date = new Date(dayKey + 'T12:00:00Z');
+                btn.textContent = date.toLocaleDateString('nl-NL', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' });
+                btn.dataset.dayKey = dayKey;
+                if (!hasSlots) btn.disabled = true;
+                btn.onclick = () => handleDayClick(dayKey, btn);
+                dayPicker.appendChild(btn);
+            });
+
+            const firstDayWithSlots = availableDays.find(dayKey => slotsByDay.has(dayKey) && slotsByDay.get(dayKey).length > 0);
+            if (firstDayWithSlots) {
+                const firstDayButton = dayPicker.querySelector(`[data-day-key="${firstDayWithSlots}"]`);
+                if (firstDayButton) firstDayButton.click();
+            } else {
+                document.getElementById('time-picker').innerHTML = '<p class="text-center text-muted">Er zijn geen beschikbare dagen in deze periode.</p>';
+            }
+        }
+
+        function groupSlotsByDay(rawSlots) {
+            const grouped = new Map();
+            rawSlots.forEach(slot => {
+                const dayKey = slot.start.split('T')[0];
+                if (!grouped.has(dayKey)) grouped.set(dayKey, []);
+                grouped.get(dayKey).push(slot);
+            });
+            return grouped;
+        }
+
         document.getElementById('check-availability-btn').addEventListener('click', async () => {
-            const destinationAddress = document.getElementById('destinationAddress').value;
+            destinationAddress = document.getElementById('destinationAddress').value;
             if (!destinationAddress) {
                 alert('Voer een adres in.');
                 return;
             }
             switchView('loading-view');
             try {
-                const response = await fetch(`/get-availability?linkId=${linkId}&destinationAddress=${encodeURIComponent(destinationAddress)}`);
-                if (!response.ok) throw new Error('Kon beschikbaarheid niet ophalen.');
-
-                const data = await response.json();
-                document.getElementById('appointment-title-main').textContent = data.title;
-                document.getElementById('appointment-title-booking').textContent = data.title;
-                document.getElementById('appointment-description').textContent = data.description;
-                document.getElementById('appointment-creator').textContent = `Aangeboden door: ${data.creatorEmail}`;
-
-                finalSlotsByDay = groupSlotsByDay(data.slots);
-                const dayPicker = document.getElementById('day-picker');
-                dayPicker.innerHTML = '';
-
-                if (finalSlotsByDay.size === 0) {
-                    showError('Geen beschikbare dagen gevonden in de komende periode.');
-                    return;
+                const response = await fetch(`/get-availability?linkId=${linkId}`);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Kon beschikbaarheid niet ophalen: ${errorText}`);
                 }
 
-                Array.from(finalSlotsByDay.keys()).sort().forEach(dayKey => {
-                    const btn = document.createElement('button');
-                    btn.className = 'btn btn-outline-primary';
-                    const [year, month, day] = dayKey.split('-').map(Number);
-                    const date = new Date(Date.UTC(year, month - 1, day));
-                    btn.textContent = date.toLocaleDateString('nl-NL', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' });
-                    btn.dataset.dayKey = dayKey;
-                    btn.onclick = () => displayTimes(dayKey);
-                    dayPicker.appendChild(btn);
-                });
-
+                const data = await response.json();
+                document.getElementById('appointment-title-booking').textContent = data.title;
+                document.getElementById('appointment-description').textContent = data.description;
+                
+                renderDayPicker(data.availableDays, data.initialSlots);
                 switchView('booking-view');
-                displayLegend(); // Toon de legenda
-                displayTimes(Array.from(finalSlotsByDay.keys()).sort()[0]);
+                displayLegend();
 
             } catch (error) {
                 showError(error.message);
@@ -314,13 +286,12 @@
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
             const phone = document.getElementById('phone').value;
-            const destinationAddress = document.getElementById('destinationAddress').value;
 
             try {
                 const response = await fetch('/book-appointment', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ linkId, startTime: selectedSlot.utc, name, email, destinationAddress, phone }),
+                    body: JSON.stringify({ linkId, startTime: selectedSlot.start, name, email, destinationAddress, phone }),
                 });
                 if (!response.ok) throw new Error('Kon de afspraak niet boeken.');
                 switchView('confirmation-view');
@@ -329,41 +300,29 @@
             }
         });
 
-        // --- Google Maps Autocomplete ---
-        let autocomplete;
         async function initMap() {
-            const { Autocomplete } = await google.maps.importLibrary('places');
-            const input = document.getElementById('destinationAddress');
-            autocomplete = new Autocomplete(input, {
-                types: ['address'],
-                componentRestrictions: { country: 'nl' },
-            });
+            try {
+                const { Autocomplete } = await google.maps.importLibrary('places');
+                const input = document.getElementById('destinationAddress');
+                new Autocomplete(input, { types: ['address'], componentRestrictions: { country: 'nl' } });
+            } catch (e) {
+                console.error("Could not load Google Maps Autocomplete", e);
+            }
         }
 
-        // --- Dynamic Script Loading ---
         async function loadGoogleMapsScript() {
-            if (!linkId) {
-                showError('Ongeldige of ontbrekende link-ID.');
-                return;
-            }
+            if (!linkId) return showError('Ongeldige of ontbrekende link-ID.');
             try {
                 const response = await fetch('/api/config');
                 if (!response.ok) throw new Error('Kon configuratie niet laden.');
                 const config = await response.json();
-                const apiKey = config.mapsApiKey;
-
-                if (!apiKey) {
-                    console.error('Google Maps API Key is missing.');
-                    return;
-                }
+                if (!config.mapsApiKey) return;
 
                 const script = document.createElement('script');
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap&loading=async`;
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${config.mapsApiKey}&libraries=places&callback=initMap&loading=async`;
                 script.async = true;
-                script.defer = true;
                 document.head.appendChild(script);
             } catch (error) {
-                showError('Fout bij het laden van de kaartfunctionaliteit.');
                 console.error('Error loading Google Maps:', error);
             }
         }
