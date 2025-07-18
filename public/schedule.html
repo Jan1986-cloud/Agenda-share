@@ -75,6 +75,7 @@
                                         <span data-i18n="schedule_button_show_availability"></span> <i class="bi bi-arrow-right"></i>
                                     </button>
                                 </div>
+                                <div id="rate-limit-error" class="alert alert-warning mt-3" style="display: none;"></div>
                             </div>
                         </div>
                     </div>
@@ -184,7 +185,33 @@
 
         function switchView(viewToShow) { views.forEach(id => { if (elements[id]) elements[id].style.display = 'none'; }); if (elements[viewToShow]) { elements[viewToShow].style.display = 'block'; } }
         function switchSubView(viewToShow) { ['address-view', 'booking-view', 'confirmation-view'].forEach(id => { if (elements[id]) elements[id].style.display = 'none'; }); if (elements[viewToShow]) { elements[viewToShow].style.display = 'block'; } }
-        function showError(message) { document.getElementById('error-message').textContent = message; switchView('error-view'); }
+        function showError(message, retryAfterSeconds = 0) {
+            const errorMessageEl = document.getElementById('error-message');
+            const retryButton = document.querySelector('#error-view button');
+            errorMessageEl.textContent = message;
+            switchView('error-view');
+
+            if (retryAfterSeconds > 0) {
+                retryButton.disabled = true;
+                let timeLeft = retryAfterSeconds;
+                const originalButtonText = translations['error_button_retry'] || 'Try again';
+
+                const updateButtonText = () => {
+                    retryButton.textContent = `${originalButtonText} (${timeLeft}s)`;
+                };
+                updateButtonText();
+
+                const timer = setInterval(() => {
+                    timeLeft--;
+                    updateButtonText();
+                    if (timeLeft <= 0) {
+                        clearInterval(timer);
+                        retryButton.textContent = originalButtonText;
+                        retryButton.disabled = false;
+                    }
+                }, 1000);
+            }
+        }
 
         function getBestCertaintyForDay(dayKey) {
             const slots = slotsByDay.get(dayKey) || [];
@@ -268,6 +295,27 @@
             renderTimeSlots(dayKey);
         }
         
+        function showRateLimitErrorOnSlot(btn, retryAfterSeconds) {
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            
+            let countdown = retryAfterSeconds;
+            const interval = setInterval(() => {
+                countdown--;
+                const message = `${translations['error_rate_limit'] || 'Too many requests. Try again in'} ${countdown}s`;
+                btn.innerHTML = `<span class="text-danger">${message}</span>`;
+                
+                if (countdown <= 0) {
+                    clearInterval(interval);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    // Re-render the time slots to reset the state
+                    const dayKey = new Date(selectedSlot.start).toISOString().split('T')[0];
+                    renderTimeSlots(dayKey);
+                }
+            }, 1000);
+        }
+
         async function handleTimeSlotClick(slot, btn) {
             const dayKey = new Date(slot.start).toISOString().split('T')[0];
             const wasActive = btn.classList.contains('active');
@@ -308,7 +356,16 @@
                     body: JSON.stringify({ linkId, destinationAddress, slotStart: slot.start }),
                 });
 
-                if (!response.ok) throw new Error(translations['error_verify_slot']);
+                if (response.status === 429) {
+                    const data = await response.json();
+                    showRateLimitErrorOnSlot(btn, data.retryAfterSeconds || 60);
+                    return;
+                }
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`${translations['error_verify_slot'] || 'Verification of the time slot failed.'} ${errorText}`);
+                }
                 
                 const data = await response.json();
                 updateDiagnostics(data.diagnostic);
@@ -327,7 +384,7 @@
                         newBtn.className = 'btn btn-danger disabled';
                         newBtn.disabled = true;
                     }
-                } else { // Travel time API failed
+                } else { // Travel time API failed for other reasons
                     btn.disabled = false;
                     renderTimeSlots(dayKey);
                     const sameBtn = Array.from(document.querySelectorAll('#time-picker .btn')).find(b => b.dataset.start === slot.start);
@@ -339,6 +396,9 @@
                 }
             } catch (error) {
                 showError(error.message);
+                // Also reset the button on generic error
+                btn.disabled = false;
+                renderTimeSlots(new Date(slot.start).toISOString().split('T')[0]);
             }
         }
 
@@ -416,23 +476,100 @@
             if(panel) panel.style.display = 'block';
         }
 
+        function handleGenericRateLimitError(seconds) {
+            const rateLimitErrorEl = document.getElementById('rate-limit-error');
+            const checkBtn = document.getElementById('check-availability-btn');
+            
+            // Ensure we are on the correct view to show the error
+            switchSubView('address-view');
+            availabilityLoadingEl.style.display = 'none';
+            availabilityResultsEl.style.display = 'none';
+            
+            rateLimitErrorEl.style.display = 'block';
+            checkBtn.disabled = true;
+
+            let timeLeft = seconds;
+
+            const timerTranslations = {
+                tooManyRequests: translations['rate_limit_message'] || 'Too many requests. Please try again in',
+                minutes: translations['rate_limit_minutes'] || 'minutes',
+                minute: translations['rate_limit_minute'] || 'minute',
+                and: translations['rate_limit_and'] || 'and',
+                seconds: translations['rate_limit_seconds'] || 'seconds',
+                second: translations['rate_limit_second'] || 'second'
+            };
+
+            const updateTimer = () => {
+                const minutes = Math.floor(timeLeft / 60);
+                const remainingSeconds = timeLeft % 60;
+                let timeString = '';
+                if (minutes > 0) {
+                    timeString += `${minutes} ${minutes > 1 ? timerTranslations.minutes : timerTranslations.minute}`;
+                }
+                if (remainingSeconds > 0) {
+                    if(minutes > 0) timeString += ` ${timerTranslations.and} `;
+                    timeString += `${remainingSeconds} ${remainingSeconds > 1 ? timerTranslations.seconds : timerTranslations.second}`;
+                }
+
+                rateLimitErrorEl.innerHTML = `${timerTranslations.tooManyRequests} ${timeString}.`;
+            };
+
+            updateTimer();
+
+            const timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimer();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    rateLimitErrorEl.style.display = 'none';
+                    checkBtn.disabled = false;
+                }
+            }, 1000);
+        }
+
         document.getElementById('check-availability-btn').addEventListener('click', async () => {
             destinationAddress = document.getElementById('destinationAddress').value;
-            if (!destinationAddress) { alert(translations['alert_enter_address'] || 'Please enter an address.'); return; }
+            if (!destinationAddress) { 
+                alert(translations['alert_enter_address'] || 'Please enter an address.'); 
+                return; 
+            }
+            
+            document.getElementById('rate-limit-error').style.display = 'none';
             switchSubView('booking-view');
             availabilityResultsEl.style.display = 'none';
             availabilityLoadingEl.style.display = 'block';
+
             try {
                 const response = await fetch(`/get-availability?linkId=${linkId}`);
-                if (!response.ok) { const errorText = await response.text(); throw new Error(`Could not retrieve availability: ${errorText}`); }
+                
+                if (!response.ok) {
+                    // Always try to parse the body, as our server sends JSON for errors.
+                    const errorData = await response.json().catch(() => null);
+
+                    if (response.status === 429 && errorData) {
+                        handleGenericRateLimitError(errorData.retryAfterSeconds || 60);
+                        return; // Stop execution
+                    }
+                    
+                    // For other errors, use the message from the body or a default one.
+                    const errorMessage = errorData?.message || `Error: ${response.status} ${response.statusText}`;
+                    throw new Error(errorMessage);
+                }
+
                 const data = await response.json();
                 appointmentDuration = data.duration;
                 slotsByDay = groupSlotsByDay(data.initialSlots);
                 planningWindow = { offset: data.offset, totalDays: data.window };
                 renderDayPicker();
                 displayLegend();
-            } catch (error) { showError(error.message); } 
-            finally { availabilityLoadingEl.style.display = 'none'; availabilityResultsEl.style.display = 'block'; }
+                availabilityResultsEl.style.display = 'block';
+
+            } catch (error) { 
+                showError(error.message); 
+            } 
+            finally { 
+                availabilityLoadingEl.style.display = 'none';
+            }
         });
 
         async function loadInitialData() {
@@ -474,3 +611,5 @@
             }, 100);
         });
     </script>
+</body>
+</html>

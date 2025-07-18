@@ -47,6 +47,7 @@
   "dashboard_button_copied": "Copied!",
   "dashboard_button_edit": "Edit",
   "dashboard_button_delete": "Delete",
+  "dashboard_button_test": "Test",
   "schedule_page_title": "Schedule an appointment",
   "schedule_prompt_address": "Enter your address to calculate travel time. This helps us find the smartest moment for your appointment.",
   "schedule_label_address": "Your appointment address",
@@ -72,6 +73,8 @@
   "schedule_confirmation_subtitle": "You will receive a confirmation by email with the details of your appointment.",
   "error_title": "Something went wrong",
   "error_button_retry": "Try again",
+  "error_rate_limit": "Too many requests. Try again in",
+  "error_rate_limit_title": "Rate Limit Exceeded",
   "day_sunday": "Sunday",
   "day_monday": "Monday",
   "day_tuesday": "Tuesday",
@@ -165,19 +168,15 @@
   "booking_warning_yellow": "<strong>Warning:</strong> Travel time could not be calculated. There is an increased risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
   "booking_warning_blue": "<strong>Warning:</strong> Travel time could not be calculated, but there appears to be sufficient margin. You can proceed, but the appointment may be canceled later."
 ,
-  "booking_warning_red": "<strong>Warning:</strong> Travel time could not be calculated. There is a high risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
-  "booking_warning_yellow": "<strong>Warning:</strong> Travel time could not be calculated. There is an increased risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
-  "booking_warning_blue": "<strong>Warning:</strong> Travel time could not be calculated, but there appears to be sufficient margin. You can proceed, but the appointment may be canceled later."
+  "rate_limit_message": "Too many requests. Please try again in",
+  "rate_limit_minutes": "minutes",
+  "rate_limit_minute": "minute",
+  "rate_limit_and": "and",
+  "rate_limit_seconds": "seconds",
+  "rate_limit_second": "second",
+  "error_session_expired": "Your session has expired. Please log in again.",
+  "login_again_button": "Log in again"
 ,
-  "booking_warning_red": "<strong>Warning:</strong> Travel time could not be calculated. There is a high risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
-  "booking_warning_yellow": "<strong>Warning:</strong> Travel time could not be calculated. There is an increased risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
-  "booking_warning_blue": "<strong>Warning:</strong> Travel time could not be calculated, but there appears to be sufficient margin. You can proceed, but the appointment may be canceled later."
-,
-  "booking_warning_red": "<strong>Warning:</strong> Travel time could not be calculated. There is a high risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
-  "booking_warning_yellow": "<strong>Warning:</strong> Travel time could not be calculated. There is an increased risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
-  "booking_warning_blue": "<strong>Warning:</strong> Travel time could not be calculated, but there appears to be sufficient margin. You can proceed, but the appointment may be canceled later."
-,
-  "booking_warning_red": "<strong>Warning:</strong> Travel time could not be calculated. There is a high risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
-  "booking_warning_yellow": "<strong>Warning:</strong> Travel time could not be calculated. There is an increased risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
-  "booking_warning_blue": "<strong>Warning:</strong> Travel time could not be calculated, but there appears to be sufficient margin. You can proceed, but the appointment may be canceled later."
+  "error_session_expired": "Your session has expired. Please log in again.",
+  "login_again_button": "Log in again"
 }

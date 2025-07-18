@@ -47,6 +47,7 @@
   "dashboard_button_copied": "Gekopieerd!",
   "dashboard_button_edit": "Bewerk",
   "dashboard_button_delete": "Verwijder",
+  "dashboard_button_test": "Test",
   "schedule_page_title": "Plan uw afspraak",
   "schedule_prompt_address": "Vul uw adres in om de reistijd te berekenen. Zo vinden we samen het slimste moment voor uw afspraak.",
   "schedule_label_address": "Uw afspraakadres",
@@ -72,6 +73,8 @@
   "schedule_confirmation_subtitle": "U ontvangt een bevestiging per e-mail met de details van uw afspraak.",
   "error_title": "Er is iets misgegaan",
   "error_button_retry": "Probeer opnieuw",
+  "error_rate_limit": "Te veel aanvragen. Probeer opnieuw over",
+  "error_rate_limit_title": "API Limiet Overschreden",
   "day_sunday": "Zondag",
   "day_monday": "Maandag",
   "day_tuesday": "Dinsdag",
@@ -165,19 +168,15 @@
   "booking_warning_yellow": "<strong>Let op:</strong> De reistijd kon niet worden berekend. Er is een verhoogd risico dat dit tijdslot te krap is. U kunt doorgaan, maar de afspraak wordt mogelijk later geannuleerd.",
   "booking_warning_blue": "<strong>Let op:</strong> De reistijd kon niet worden berekend, maar er lijkt voldoende marge te zijn. U kunt doorgaan, maar de afspraak wordt mogelijk later geannuleerd."
 ,
-  "booking_warning_red": "<strong>Let op:</strong> De reistijd kon niet worden berekend. Er is een hoog risico dat dit tijdslot te krap is. U kunt doorgaan, maar de afspraak wordt mogelijk later geannuleerd.",
-  "booking_warning_yellow": "<strong>Let op:</strong> De reistijd kon niet worden berekend. Er is een verhoogd risico dat dit tijdslot te krap is. U kunt doorgaan, maar de afspraak wordt mogelijk later geannuleerd.",
-  "booking_warning_blue": "<strong>Let op:</strong> De reistijd kon niet worden berekend, maar er lijkt voldoende marge te zijn. U kunt doorgaan, maar de afspraak wordt mogelijk later geannuleerd."
+  "rate_limit_message": "Te veel aanvragen. Probeer het opnieuw over",
+  "rate_limit_minutes": "minuten",
+  "rate_limit_minute": "minuut",
+  "rate_limit_and": "en",
+  "rate_limit_seconds": "seconden",
+  "rate_limit_second": "seconde",
+  "error_session_expired": "Uw sessie is verlopen. Log alstublieft opnieuw in.",
+  "login_again_button": "Opnieuw inloggen"
 ,
-  "booking_warning_red": "<strong>Let op:</strong> De reistijd kon niet worden berekend. Er is een hoog risico dat dit tijdslot te krap is. U kunt doorgaan, maar de afspraak wordt mogelijk later geannuleerd.",
-  "booking_warning_yellow": "<strong>Let op:</strong> De reistijd kon niet worden berekend. Er is een verhoogd risico dat dit tijdslot te krap is. U kunt doorgaan, maar de afspraak wordt mogelijk later geannuleerd.",
-  "booking_warning_blue": "<strong>Let op:</strong> De reistijd kon niet worden berekend, maar er lijkt voldoende marge te zijn. U kunt doorgaan, maar de afspraak wordt mogelijk later geannuleerd."
-,
-  "booking_warning_red": "<strong>Let op:</strong> De reistijd kon niet worden berekend. Er is een hoog risico dat dit tijdslot te krap is. U kunt doorgaan, maar de afspraak wordt mogelijk later geannuleerd.",
-  "booking_warning_yellow": "<strong>Let op:</strong> De reistijd kon niet worden berekend. Er is een verhoogd risico dat dit tijdslot te krap is. U kunt doorgaan, maar de afspraak wordt mogelijk later geannuleerd.",
-  "booking_warning_blue": "<strong>Let op:</strong> De reistijd kon niet worden berekend, maar er lijkt voldoende marge te zijn. U kunt doorgaan, maar de afspraak wordt mogelijk later geannuleerd."
-,
-  "booking_warning_red": "<strong>Let op:</strong> De reistijd kon niet worden berekend. Er is een hoog risico dat dit tijdslot te krap is. U kunt doorgaan, maar de afspraak wordt mogelijk later geannuleerd.",
-  "booking_warning_yellow": "<strong>Let op:</strong> De reistijd kon niet worden berekend. Er is een verhoogd risico dat dit tijdslot te krap is. U kunt doorgaan, maar de afspraak wordt mogelijk later geannuleerd.",
-  "booking_warning_blue": "<strong>Let op:</strong> De reistijd kon niet worden berekend, maar er lijkt voldoende marge te zijn. U kunt doorgaan, maar de afspraak wordt mogelijk later geannuleerd."
+  "error_session_expired": "Uw sessie is verlopen. Log alstublieft opnieuw in.",
+  "login_again_button": "Opnieuw inloggen"
 }

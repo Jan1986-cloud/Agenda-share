@@ -32,7 +32,11 @@ export async function getTravelTime(originCoords, destCoords) {
         });
 
         if (!response.ok) {
-            // Als de API een error geeft (bv. 404, 500), log dit en geef een fout terug.
+            if (response.status === 429) {
+                console.warn('Rate limit exceeded for OpenRouteService API.');
+                return { status: 'RATE_LIMIT_EXCEEDED', duration: null, origin: originCoords, destination: destCoords };
+            }
+            // Als de API een andere error geeft, log dit en geef een fout terug.
             console.error(`Error from OpenRouteService API: ${response.status} ${response.statusText}`);
             const errorBody = await response.text();
             console.error('Error body:', errorBody);

@@ -10,7 +10,6 @@ import { fileURLToPath } from 'url';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import { pool, createTables, testConnection } from './db.js';
-import { init as initAuth } from './auth/index.js';
 import { calculateAvailability } from './utils/availability-logic.js';
 import { getTravelTime } from './utils/travel-time.js';
 import { getCoordinatesForAddress } from './utils/geocoding.js';
@@ -114,13 +113,52 @@ app.use(session({
     },
 }));
 
-// Initialize all authentication providers
-initAuth(app);
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI
+);
 
-// --- Static & Protected Routes ---
+const scopes = [
+  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/calendar.events',
+  'https://www.googleapis.com/auth/userinfo.email',
+];
+
+// --- Static & Auth Routes ---
 
 app.get('/api/config', (req, res) => res.json({ mapsApiKey: process.env.GOOGLE_MAPS_API_KEY }));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/auth', (req, res) => {
+    const url = oauth2Client.generateAuthUrl({ access_type: 'offline', prompt: 'consent', scope: scopes });
+    res.redirect(url);
+});
+
+app.get('/oauth2callback', async (req, res) => {
+    const { code } = req.query;
+    try {
+        const { tokens } = await oauth2Client.getToken({ code, redirect_uri: process.env.GOOGLE_REDIRECT_URI });
+        oauth2Client.setCredentials(tokens);
+        const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+        const { data } = await oauth2.userinfo.get();
+        if (!data.email) return res.status(500).send('Kon e-mailadres niet ophalen van Google.');
+
+        let userResult = await pool.query('SELECT * FROM users WHERE email = $1', [data.email]);
+        let userId = userResult.rows[0]?.id;
+
+        if (userId) {
+            await pool.query('UPDATE users SET tokens = $1 WHERE id = $2', [tokens, userId]);
+        } else {
+            userId = uuidv4();
+            await pool.query('INSERT INTO users (id, email, tokens) VALUES ($1, $2, $3)', [userId, data.email, tokens]);
+        }
+        req.session.userId = userId;
+        res.redirect('/dashboard.html');
+    } catch (error) {
+        console.error('Error during authentication:', error);
+        res.status(500).send('Er is een fout opgetreden tijdens de authenticatie.');
+    }
+});
 
 app.get('/dashboard.html', (req, res) => {
     if (!req.session.userId) return res.redirect('/');

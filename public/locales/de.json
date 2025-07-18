@@ -47,6 +47,7 @@
   "dashboard_button_copied": "Kopiert!",
   "dashboard_button_edit": "Bearbeiten",
   "dashboard_button_delete": "Löschen",
+  "dashboard_button_test": "Test",
   "schedule_page_title": "Termin planen",
   "schedule_prompt_address": "Enter your address to calculate travel time. This helps us find the smartest moment for your appointment.",
   "schedule_label_address": "Ihre Terminadresse",
@@ -72,6 +73,8 @@
   "schedule_confirmation_subtitle": "Sie erhalten eine Bestätigung per E-Mail mit den Details Ihres Termins.",
   "error_title": "Etwas ist schief gelaufen",
   "error_button_retry": "Erneut versuchen",
+  "error_rate_limit": "Zu viele Anfragen. Versuchen Sie es erneut in",
+  "error_rate_limit_title": "API-Limit Überschritten",
   "day_sunday": "Sonntag",
   "day_monday": "Montag",
   "day_tuesday": "Dienstag",
@@ -165,19 +168,15 @@
   "booking_warning_yellow": "<strong>Warning:</strong> Travel time could not be calculated. There is an increased risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
   "booking_warning_blue": "<strong>Warning:</strong> Travel time could not be calculated, but there appears to be sufficient margin. You can proceed, but the appointment may be canceled later."
 ,
-  "booking_warning_red": "<strong>Warning:</strong> Travel time could not be calculated. There is a high risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
-  "booking_warning_yellow": "<strong>Warning:</strong> Travel time could not be calculated. There is an increased risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
-  "booking_warning_blue": "<strong>Warning:</strong> Travel time could not be calculated, but there appears to be sufficient margin. You can proceed, but the appointment may be canceled later."
+  "rate_limit_message": "Zu viele Anfragen. Bitte versuchen Sie es erneut in",
+  "rate_limit_minutes": "Minuten",
+  "rate_limit_minute": "Minute",
+  "rate_limit_and": "und",
+  "rate_limit_seconds": "Sekunden",
+  "rate_limit_second": "Sekunde",
+  "error_session_expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+  "login_again_button": "Erneut anmelden"
 ,
-  "booking_warning_red": "<strong>Warning:</strong> Travel time could not be calculated. There is a high risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
-  "booking_warning_yellow": "<strong>Warning:</strong> Travel time could not be calculated. There is an increased risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
-  "booking_warning_blue": "<strong>Warning:</strong> Travel time could not be calculated, but there appears to be sufficient margin. You can proceed, but the appointment may be canceled later."
-,
-  "booking_warning_red": "<strong>Warning:</strong> Travel time could not be calculated. There is a high risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
-  "booking_warning_yellow": "<strong>Warning:</strong> Travel time could not be calculated. There is an increased risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
-  "booking_warning_blue": "<strong>Warning:</strong> Travel time could not be calculated, but there appears to be sufficient margin. You can proceed, but the appointment may be canceled later."
-,
-  "booking_warning_red": "<strong>Warning:</strong> Travel time could not be calculated. There is a high risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
-  "booking_warning_yellow": "<strong>Warning:</strong> Travel time could not be calculated. There is an increased risk this time slot will not fit. You can proceed, but the appointment may be canceled later.",
-  "booking_warning_blue": "<strong>Warning:</strong> Travel time could not be calculated, but there appears to be sufficient margin. You can proceed, but the appointment may be canceled later."
+  "error_session_expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+  "login_again_button": "Erneut anmelden"
 }
