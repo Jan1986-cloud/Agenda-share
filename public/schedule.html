@@ -3,292 +3,303 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Plan een afspraak</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <title data-i18n="page_title_schedule"></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         body { background-color: #f8f9fa; }
-        .container { max-width: 700px; }
-        .card { border-radius: 0.75rem; }
-        .slot-picker { height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.5rem; padding: 0.5rem; }
-        .slot-picker .btn { width: 100%; margin-bottom: 0.5rem; border-width: 2px; }
-        .slot-picker .btn.verifying .spinner-border { width: 1rem; height: 1rem; }
+        .navbar-brand { font-weight: 600; }
+        .schedule-widget { max-width: 800px; margin: auto; }
+        .slot-picker { height: 350px; overflow-y: auto; padding: 0.5rem; }
+        .slot-picker .btn { width: 100%; margin-bottom: 0.5rem; }
+        .day-btn.active { font-weight: bold; }
+        .day-btn.unavailable { 
+            height: auto; 
+            padding: .25rem .5rem; 
+            font-size: .875rem;
+            background-color: #e9ecef;
+            border-color: #e9ecef;
+            color: #6c757d;
+            opacity: 0.7;
+        }
+        .confirmation-box { background-color: #d1e7dd; border-left: 5px solid #0f5132; }
+        .marketing-section { border-top: 1px solid #dee2e6; padding-top: 2rem; margin-top: 2rem; }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom mb-4">
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="#" data-i18n="page_title_schedule"></a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-translate"></i> <span data-i18n="lang_selector_title"></span>
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="languageDropdown">
-                            <!-- Dynamically filled by i18n.js -->
-                        </ul>
-                    </li>
-                </ul>
+            <a class="navbar-brand" href="#">Agenda Share</a>
+            <div class="ms-auto">
+                <div class="dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-translate"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+                        <!-- Dynamically filled by i18n.js -->
+                    </ul>
+                </div>
             </div>
         </div>
     </nav>
-    <div class="container mt-5">
-        <div class="card shadow-sm">
-            <div class="card-body p-5">
-                <div id="address-view">
-                    <h1 id="appointment-title-main" class="card-title text-center mb-4" data-i18n="schedule_page_title"></h1>
-                    <p id="appointment-description" class="text-center"></p>
-                    <p class="text-center text-muted mb-4" data-i18n="schedule_prompt_address"></p>
-                    <div class="mb-3">
-                        <label for="destinationAddress" class="form-label fs-5" data-i18n="schedule_label_address"></label>
-                        <input type="text" class="form-control form-control-lg" id="destinationAddress" data-i18n="form_placeholder_start_address" required />
-                    </div>
-                    <div class="d-grid">
-                        <button id="check-availability-btn" class="btn btn-primary btn-lg" data-i18n="schedule_button_show_availability"></button>
-                    </div>
+
+    <div class="container my-5">
+        <div class="card shadow-sm schedule-widget border-0">
+            <div class="card-body p-4 p-md-5">
+
+                <div id="initial-loading" class="text-center">
+                    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
                 </div>
 
-                <div id="loading-view" style="display: none" class="text-center">
-                    <div class="spinner-border" role="status"><span class="visually-hidden">Laden...</span></div>
-                    <p class="mt-3" data-i18n="schedule_loading"></p>
-                </div>
-
-                <div id="booking-view" style="display: none">
-                    <h2 id="appointment-title-booking" class="text-center mb-4"></h2>
-                    <p class="text-center text-muted mb-4" data-i18n="schedule_picker_prompt"></p>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h3 class="fs-5 text-center mb-3" data-i18n="schedule_picker_title_day"></h3>
-                            <div id="day-picker" class="slot-picker"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <h3 class="fs-5 text-center mb-3" data-i18n="schedule_picker_title_time"></h3>
-                            <div id="time-picker" class="slot-picker"></div>
-                        </div>
-                    </div>
-                    
-                    <div id="legend" class="mt-4 p-3 bg-light border rounded" style="display: none;">
-                        <h4 class="fs-6 mb-3" data-i18n="schedule_legend_title"></h4>
-                        <ul class="list-unstyled mb-0"></ul>
-                    </div>
-
-                    <div id="diagnostic-panel" class="mt-4" style="display: none;">
-                        <h4 class="fs-6" data-i18n="schedule_diagnostics_title"></h4>
-                        <div class="table-responsive" style="max-height: 200px;">
-                            <table class="table table-sm table-bordered">
-                                <thead><tr><th data-i18n="schedule_diagnostics_from"></th><th data-i18n="schedule_diagnostics_to"></th><th data-i18n="schedule_diagnostics_status"></th><th data-i18n="schedule_diagnostics_travel_time"></th></tr></thead>
-                                <tbody id="diagnostic-table-body"></tbody>
-                            </table>
-                            <p class="text-muted small mt-2" data-i18n="schedule_diagnostics_disclaimer"></p>
-                            <p id="total-time-info" class="fw-bold"></p>
-                        </div>
-                    </div>
-
-                    <form id="booking-form" style="display: none" class="mt-4">
-                        <h3 id="booking-form-title" class="fs-5 mb-3" data-i18n="schedule_booking_form_title"></h3>
-                        <div class="mb-3"><label for="name" class="form-label" data-i18n="schedule_booking_form_name"></label><input type="text" id="name" class="form-control" required /></div>
-                        <div class="mb-3"><label for="email" class="form-label" data-i18n="schedule_booking_form_email"></label><input type="email" id="email" class="form-control" required /></div>
-                        <div class="mb-3"><label for="phone" class="form-label" data-i18n="schedule_booking_form_phone"></label><input type="tel" id="phone" class="form-control" required /></div>
-                        <div class="mb-3"><label for="comments" class="form-label" data-i18n="schedule_booking_form_comments"></label><textarea id="comments" class="form-control" rows="3"></textarea></div>
-                        <div class="d-grid"><button type="submit" class="btn btn-success btn-lg"><i class="bi bi-check-lg"></i> <span data-i18n="schedule_booking_form_submit"></span></button></div>
-                    </form>
-                </div>
-
-                <div id="confirmation-view" style="display: none" class="text-center">
-                    <h2 class="text-success mb-3" data-i18n="schedule_confirmation_title"></h2>
-                    <p data-i18n="schedule_confirmation_subtitle"></p>
-                </div>
-
-                <div id="error-view" style="display: none" class="text-center">
-                    <h2 class="text-danger mb-3" data-i18n="error_title"></h2>
+                <div id="error-view" style="display: none;" class="text-center">
+                    <h2 class="text-danger" data-i18n="error_title"></h2>
                     <p id="error-message"></p>
                     <button class="btn btn-primary" onclick="location.reload()" data-i18n="error_button_retry"></button>
                 </div>
+
+                <div id="main-content" style="display: none;">
+                    <div id="address-view">
+                        <h2 id="appointment-title-main" class="card-title text-center mb-2"></h2>
+                        <hr class="my-4">
+                        <p class="text-center fw-bold mb-3" data-i18n="schedule_prompt_address"></p>
+                        <div class="row justify-content-center">
+                            <div class="col-lg-10">
+                                <div class="mb-3">
+                                    <label for="destinationAddress" class="form-label visually-hidden" data-i18n="schedule_label_address"></label>
+                                    <input type="text" class="form-control form-control-lg" id="destinationAddress" data-i18n-placeholder="schedule_label_address" required />
+                                </div>
+                                <div class="d-grid">
+                                    <button id="check-availability-btn" class="btn btn-primary btn-lg">
+                                        <span data-i18n="schedule_button_show_availability"></span> <i class="bi bi-arrow-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="booking-view" style="display: none;">
+                        <div class="text-center">
+                            <h2 id="appointment-title-booking" class="card-title mb-2"></h2>
+                            <p class="text-muted" data-i18n="schedule_picker_prompt"></p>
+                        </div>
+                        
+                        <div id="availability-loading" class="text-center my-4" style="display: none;">
+                            <div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
+                            <p class="mt-2" data-i18n="schedule_loading"></p>
+                        </div>
+
+                        <div id="availability-results">
+                            <div class="row g-4">
+                                <div class="col-md-5">
+                                    <h3 class="fs-5 text-center mb-3" data-i18n="schedule_picker_title_day"></h3>
+                                    <div id="day-picker" class="slot-picker bg-light rounded"></div>
+                                </div>
+                                <div class="col-md-7">
+                                    <h3 class="fs-5 text-center mb-3" data-i18n="schedule_picker_title_time"></h3>
+                                    <div id="time-picker" class="slot-picker bg-light rounded"></div>
+                                </div>
+                            </div>
+                             <div id="legend" class="mt-4 p-3 bg-light border rounded" style="display: none;">
+                                <h4 class="fs-6 mb-3" data-i18n="schedule_legend_title"></h4>
+                                <ul id="legend-list" class="list-unstyled mb-0"></ul>
+                            </div>
+                            <div id="diagnostic-panel" class="mt-4" style="display: none;">
+                                <h4 class="fs-6" data-i18n="schedule_diagnostics_title"></h4>
+                                <div class="table-responsive" style="max-height: 200px;">
+                                    <table class="table table-sm table-bordered">
+                                        <thead><tr><th data-i18n="schedule_diagnostics_from"></th><th data-i18n="schedule_diagnostics_to"></th><th data-i18n="schedule_diagnostics_status"></th><th data-i18n="schedule_diagnostics_travel_time"></th></tr></thead>
+                                        <tbody id="diagnostic-table-body"></tbody>
+                                    </table>
+                                    <p class="text-muted small mt-2" data-i18n="schedule_diagnostics_disclaimer"></p>
+                                    <p id="total-time-info" class="fw-bold"></p>
+                                </div>
+                            </div>
+                            <div id="booking-form-container" class="mt-4"></div>
+                        </div>
+                    </div>
+
+                    <div id="confirmation-view" style="display: none;" class="text-center">
+                        <div class="confirmation-box p-4 mb-4 rounded">
+                            <h2 class="text-success mb-3"><i class="bi bi-check-circle-fill"></i> <span data-i18n="schedule_confirmation_title"></span></h2>
+                            <p class="mb-0" data-i18n="schedule_confirmation_subtitle"></p>
+                        </div>
+                        <div class="marketing-section">
+                            <h3 class="h4" data-i18n="confirmation_marketing_title"></h3>
+                            <p class="text-muted" data-i18n="confirmation_marketing_subtitle"></p>
+                            <ul class="list-unstyled text-start w-75 mx-auto mt-4">
+                                <li class="mb-2"><i class="bi bi-check-lg text-success me-2"></i><span data-i18n="confirmation_marketing_feature1"></span></li>
+                                <li class="mb-2"><i class="bi bi-check-lg text-success me-2"></i><span data-i18n="confirmation_marketing_feature2"></span></li>
+                                <li class="mb-2"><i class="bi bi-check-lg text-success me-2"></i><span data-i18n="confirmation_marketing_feature3"></span></li>
+                            </ul>
+                            <a href="https://planner.handigvanjan.nl" target="_blank" class="btn btn-success mt-4" data-i18n="confirmation_marketing_cta"></a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        <footer class='text-center mt-5 p-4 text-muted border-top'><a href='/privacy.html' data-i18n="privacy_policy"></a></footer>
+        <footer class='text-center mt-4 text-muted small'>
+            <a href='/privacy.html' data-i18n="privacy_policy"></a>
+        </footer>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="js/i18n.js"></script>
     <script>
         const params = new URLSearchParams(window.location.search);
         const linkId = params.get('linkId');
-        let selectedSlot = null;
-        let slotsByDay = new Map();
-        let rippledDays = new Set();
-        let destinationAddress = '';
-        let appointmentDuration = 0;
-        let creatorEmail = '';
-        let appointmentTitle = '';
+        let selectedSlot = null, slotsByDay = new Map(), rippledDays = new Set(), diagnosticCache = new Map();
+        let destinationAddress = '', appointmentTitle = '', appointmentDuration = 0, planningWindow = {};
 
-        // ... (rest of the script remains the same, but we need to adjust parts that set text)
-
-        function switchView(viewId) {
-            ['address-view', 'loading-view', 'booking-view', 'confirmation-view', 'error-view'].forEach(id => {
-                document.getElementById(id).style.display = id === viewId ? 'block' : 'none';
-            });
-        }
-
-        function showError(message) {
-            document.getElementById('error-message').textContent = message;
-            switchView('error-view');
-        }
+        const views = ['initial-loading', 'error-view', 'main-content', 'address-view', 'booking-view', 'confirmation-view'];
+        const elements = {};
+        views.forEach(id => elements[id] = document.getElementById(id));
         
-        // ... (handleTimeSlotClick, renderTimeSlots, etc. remain largely the same)
-
-        function renderDayPicker(availableDays, initialSlots) {
-            const dayPicker = document.getElementById('day-picker');
-            dayPicker.innerHTML = '';
-            slotsByDay = groupSlotsByDay(initialSlots);
-            rippledDays.clear();
-
-            availableDays.forEach(dayKey => {
-                const btn = document.createElement('button');
-                const hasSlots = slotsByDay.has(dayKey) && slotsByDay.get(dayKey).length > 0;
-                btn.className = `btn day-btn ${hasSlots ? 'btn-outline-primary' : 'btn-outline-secondary'}`;
-                const date = new Date(dayKey + 'T12:00:00Z');
-                
-                // Use Intl.DateTimeFormat for language-sensitive date formatting
-                const lang = document.documentElement.lang || 'nl';
-                btn.textContent = new Intl.DateTimeFormat(lang, { weekday: 'long', day: 'numeric', month: 'long' }).format(date);
-
-                btn.dataset.dayKey = dayKey;
-                if (!hasSlots) btn.disabled = true;
-                btn.onclick = () => handleDayClick(dayKey, btn);
-                dayPicker.appendChild(btn);
-            });
-
-            const firstDayWithSlots = availableDays.find(dayKey => slotsByDay.has(dayKey) && slotsByDay.get(dayKey).length > 0);
-            if (firstDayWithSlots) {
-                const firstDayButton = dayPicker.querySelector(`[data-day-key="${firstDayWithSlots}"]`);
-                if (firstDayButton) firstDayButton.click();
-            } else {
-                document.getElementById('time-picker').innerHTML = `<p class="text-center text-muted">${translations['no_slots_available'] || 'Er zijn geen beschikbare dagen in deze periode.'}</p>`;
-            }
-        }
-
-        // ... (The rest of the script)
-        
-        // The main DOMContentLoaded listener needs to be adapted like in dashboard.html
-        document.addEventListener('DOMContentLoaded', () => {
-            const checkTranslations = setInterval(() => {
-                if (Object.keys(translations).length > 0) {
-                    clearInterval(checkTranslations);
-                    // Initial page setup that depends on translations can go here
-                    loadGoogleMapsScript();
-                }
-            }, 100);
-        });
-
-        // The original script content follows, but we ensure it runs after translations are loaded.
-        // For brevity, I'm not repeating the entire original script, but the structure above is key.
-        // The original functions like `handleTimeSlotClick`, `groupSlotsByDay`, `fetch` calls etc. are kept.
-        // The key change is wrapping the initialization logic in the `checkTranslations` interval.
-        
-        // --- Paste the original <script> content here, minus the parts already adapted ---
-        
-        const marginClassMap = {
-            blue: 'border-primary',
-            yellow: 'border-warning',
-            red: 'border-danger'
-        };
+        const availabilityLoadingEl = document.getElementById('availability-loading');
+        const availabilityResultsEl = document.getElementById('availability-results');
 
         const certaintyInfo = {
-            green:  { class: 'btn-success', borderClass: 'border-success', text: 'Reistijd is berekend. Deze afspraak is bevestigd.' },
-            blue:   { class: 'btn-outline-primary', borderClass: 'border-primary', text: 'Ruime marge (>1 uur) tot de volgende afspraak.' },
-            yellow: { class: 'btn-outline-primary', borderClass: 'border-warning', text: 'Beperkte marge (30-60 min) tot de volgende afspraak.' },
-            red:    { class: 'btn-outline-primary', borderClass: 'border-danger',  text: 'Weinig marge (<30 min) tot de volgende afspraak.' },
+            green:  { class: 'btn-success', outline: 'btn-outline-success', textKey: 'certainty_green' },
+            blue:   { class: 'btn-primary', outline: 'btn-outline-primary', textKey: 'certainty_blue' },
+            yellow: { class: 'btn-warning', outline: 'btn-outline-warning', textKey: 'certainty_yellow' },
+            red:    { class: 'btn-danger',  outline: 'btn-outline-danger', textKey: 'certainty_red' },
         };
 
         function displayLegend() {
-            const legendContainer = document.querySelector('#legend ul');
+            const legendContainer = document.getElementById('legend-list');
+            if (!legendContainer) return;
             legendContainer.innerHTML = '';
             ['green', 'blue', 'yellow', 'red'].forEach(key => {
                 const info = certaintyInfo[key];
                 const li = document.createElement('li');
                 li.className = 'mb-2 d-flex align-items-center';
-                const color = info.class.includes('success') ? `var(--bs-success)` : `var(--bs-${info.borderClass.split('-')[1]})`;
-                const borderStyle = info.class.includes('success') ? '' : `border: 2px solid ${color}; background-color: transparent;`;
-                const bgStyle = info.class.includes('success') ? `background-color: ${color};` : '';
-                li.innerHTML = `<span style="height: 15px; width: 15px; ${bgStyle} ${borderStyle} border-radius: 50%; display: inline-block; margin-right: 10px; flex-shrink: 0;"></span><div><small>${info.text}</small></div>`;
+                const colorName = info.class.replace('btn-','');
+                li.innerHTML = `<span style="width: 15px; height: 15px; border-radius: 3px;" class="d-inline-block me-2 bg-${colorName}"></span> <small data-i18n="${info.textKey}"></small>`;
                 legendContainer.appendChild(li);
             });
             document.getElementById('legend').style.display = 'block';
+            translatePage();
         }
 
-        function formatDuration(seconds) {
-            if (seconds === null || seconds === undefined) return 'N/A';
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.round((seconds % 3600) / 60);
-            let result = '';
-            if (hours > 0) result += `${hours} uur `;
-            if (minutes > 0 || hours === 0) result += `${minutes} min`;
-            return result.trim();
+        function switchView(viewToShow) { views.forEach(id => { if (elements[id]) elements[id].style.display = 'none'; }); if (elements[viewToShow]) { elements[viewToShow].style.display = 'block'; } }
+        function switchSubView(viewToShow) { ['address-view', 'booking-view', 'confirmation-view'].forEach(id => { if (elements[id]) elements[id].style.display = 'none'; }); if (elements[viewToShow]) { elements[viewToShow].style.display = 'block'; } }
+        function showError(message) { document.getElementById('error-message').textContent = message; switchView('error-view'); }
+
+        function getBestCertaintyForDay(dayKey) {
+            const slots = slotsByDay.get(dayKey) || [];
+            if (slots.length === 0) return null;
+            if (rippledDays.has(dayKey)) return 'green';
+            const priorities = ['blue', 'yellow', 'red'];
+            for (const p of priorities) {
+                if (slots.some(s => s.marginCategory === p)) return p;
+            }
+            return 'red';
         }
 
-        function updateDiagnostics(diagnosticLog) {
-            const diagnosticTableBody = document.getElementById('diagnostic-table-body');
-            diagnosticTableBody.innerHTML = '';
-            if (!diagnosticLog || diagnosticLog.length === 0) {
-                 document.getElementById('diagnostic-panel').style.display = 'none';
+        function renderDayPicker() {
+            const dayPicker = document.getElementById('day-picker');
+            const currentActive = dayPicker.querySelector('.active');
+            const currentActiveKey = currentActive ? currentActive.dataset.dayKey : null;
+            dayPicker.innerHTML = '';
+            
+            const today = new Date();
+            today.setUTCHours(0,0,0,0);
+            
+            for(let i = 0; i < planningWindow.totalDays; i++) {
+                const date = new Date(today.getTime() + (planningWindow.offset + i) * 24 * 60 * 60 * 1000);
+                const dayKey = date.toISOString().split('T')[0];
+                const btn = document.createElement('button');
+                const bestCertainty = getBestCertaintyForDay(dayKey);
+                
+                btn.className = 'btn day-btn';
+                if (bestCertainty) {
+                    btn.classList.add(certaintyInfo[bestCertainty].outline);
+                } else {
+                    btn.classList.add('unavailable');
+                    btn.disabled = true;
+                }
+
+                const lang = document.documentElement.lang || 'nl';
+                btn.textContent = new Intl.DateTimeFormat(lang, { weekday: 'long', day: 'numeric', month: 'long' }).format(date);
+                btn.dataset.dayKey = dayKey;
+                btn.onclick = () => handleDayClick(dayKey, btn);
+                dayPicker.appendChild(btn);
+            }
+
+            const dayToActivate = currentActiveKey ? dayPicker.querySelector(`[data-day-key="${currentActiveKey}"]`) : null;
+            if (dayToActivate && !dayToActivate.disabled) {
+                dayToActivate.classList.add('active');
+            } else {
+                const firstAvailableDay = dayPicker.querySelector('button:not(:disabled)');
+                if (firstAvailableDay) firstAvailableDay.click();
+            }
+        }
+        
+        function renderTimeSlots(dayKey) {
+            const timePicker = document.getElementById('time-picker');
+            timePicker.innerHTML = '';
+            document.getElementById('booking-form-container').innerHTML = '';
+            const times = slotsByDay.get(dayKey) || [];
+
+            if (times.length > 0) {
+                times.forEach(slot => {
+                    const btn = document.createElement('button');
+                    const isVerified = rippledDays.has(dayKey);
+                    const marginInfo = certaintyInfo[isVerified ? 'green' : (slot.marginCategory || 'red')];
+                    btn.className = `btn ${marginInfo.outline}`;
+                    const lang = document.documentElement.lang || 'nl';
+                    btn.textContent = new Date(slot.start).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
+                    btn.dataset.start = slot.start;
+                    btn.dataset.marginCategory = slot.marginCategory;
+                    btn.onclick = () => handleTimeSlotClick(slot, btn);
+                    timePicker.appendChild(btn);
+                });
+            } else {
+                timePicker.innerHTML = `<div class="text-center p-3 text-muted" data-i18n="no_slots_available_on_day"></div>`;
+                translatePage();
+            }
+        }
+
+        function handleDayClick(dayKey, dayButton) {
+            document.querySelectorAll('#day-picker .btn').forEach(b => b.classList.remove('active'));
+            dayButton.classList.add('active');
+            document.getElementById('diagnostic-panel').style.display = 'none';
+            renderTimeSlots(dayKey);
+        }
+        
+        async function handleTimeSlotClick(slot, btn) {
+            const dayKey = new Date(slot.start).toISOString().split('T')[0];
+            const wasActive = btn.classList.contains('active');
+
+            document.querySelectorAll('#time-picker .btn').forEach(b => {
+                if(b.disabled) return;
+                const isVerified = rippledDays.has(dayKey);
+                const originalCategory = b.dataset.marginCategory;
+                const marginInfo = certaintyInfo[isVerified ? 'green' : (originalCategory || 'red')];
+                b.className = `btn ${marginInfo.outline}`;
+            });
+
+            if (wasActive) {
+                selectedSlot = null;
+                document.getElementById('booking-form-container').innerHTML = '';
+                document.getElementById('diagnostic-panel').style.display = 'none';
                 return;
             }
             
-            let totalTravelSeconds = 0;
-            diagnosticLog.forEach(log => {
-                const row = diagnosticTableBody.insertRow();
-                row.insertCell().textContent = log.originAddress || 'Onbekend';
-                row.insertCell().textContent = log.destinationAddress || 'Onbekend';
-                const statusCell = row.insertCell();
-                statusCell.textContent = log.status;
-                statusCell.style.fontWeight = 'bold';
-                statusCell.style.color = log.status === 'OK' ? 'green' : 'red';
-                row.insertCell().textContent = formatDuration(log.duration);
-                if (log.status === 'OK') {
-                    totalTravelSeconds += log.duration;
-                }
-            });
-
-            const totalDurationSeconds = (appointmentDuration * 60) + totalTravelSeconds;
-            document.getElementById('total-time-info').textContent = `Totale tijd (afspraak + reistijd): ${formatDuration(totalDurationSeconds)}`;
-            document.getElementById('diagnostic-panel').style.display = 'block';
-        }
-
-        async function handleTimeSlotClick(slot, btn) {
-            if (btn.disabled) return;
-
-            const dayKey = slot.start.split('T')[0];
-
+            selectedSlot = slot;
+            const originalCategory = btn.dataset.marginCategory;
+            
             if (rippledDays.has(dayKey)) {
-                const wasActive = btn.classList.contains('active');
-                document.querySelectorAll('#time-picker .btn').forEach(b => {
-                    b.classList.remove('active', 'btn-success');
-                    if (!b.classList.contains('btn-outline-success')) {
-                        b.classList.add('btn-outline-success', 'border-success');
-                    }
-                });
-
-                if (wasActive) {
-                    selectedSlot = null;
-                    document.getElementById('booking-form').style.display = 'none';
-                } else {
-                    selectedSlot = slot;
-                    btn.classList.add('active', 'btn-success');
-                    btn.classList.remove('btn-outline-success', 'border-success');
-                    document.getElementById('booking-form-title').innerHTML = `📝 ${translations['schedule_booking_form_title_prefix'] || 'Confirm your details for'} <strong>${appointmentTitle}</strong>`;
-                    document.getElementById('booking-form').style.display = 'block';
-                }
+                btn.className = 'btn btn-success active';
+                if (diagnosticCache.has(dayKey)) updateDiagnostics(diagnosticCache.get(dayKey));
+                renderBookingForm();
                 return;
             }
 
-            document.querySelectorAll('#time-picker .btn').forEach(b => b.classList.remove('active'));
+            btn.className = `btn ${certaintyInfo[originalCategory || 'red'].class} active`;
             btn.disabled = true;
             btn.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>`;
-            document.getElementById('booking-form').style.display = 'none';
             
             try {
                 const response = await fetch('/verify-slot', {
@@ -297,78 +308,69 @@
                     body: JSON.stringify({ linkId, destinationAddress, slotStart: slot.start }),
                 });
 
-                if (!response.ok) {
-                    if(response.status === 429) {
-                        showError('U heeft te veel verzoeken gedaan. Probeer het over 5 minuten opnieuw.');
-                    } else {
-                        throw new Error('Verificatie van het slot is mislukt.');
-                    }
-                    btn.className = 'btn btn-warning';
-                    btn.innerHTML = 'Verificatie mislukt';
-                    btn.disabled = false;
-                    return;
-                }
+                if (!response.ok) throw new Error(translations['error_verify_slot']);
                 
                 const data = await response.json();
                 updateDiagnostics(data.diagnostic);
                 
-                rippledDays.add(dayKey);
-                slotsByDay.set(dayKey, data.updatedGapSlots);
-                renderTimeSlots(dayKey);
-                
-                const clickedButton = Array.from(document.querySelectorAll('#time-picker .btn')).find(b => b.dataset.start === slot.start);
-                if (clickedButton && data.isViable) {
-                     selectedSlot = slot;
-                     clickedButton.classList.remove('btn-outline-success', 'border-success');
-                     clickedButton.classList.add('btn-success', 'active');
-                     document.getElementById('booking-form-title').innerHTML = `📝 ${translations['schedule_booking_form_title_prefix'] || 'Confirm your details for'} <strong>${appointmentTitle}</strong>`;
-                     document.getElementById('booking-form').style.display = 'block';
-                } else if (clickedButton) {
-                    clickedButton.className = 'btn btn-danger';
-                    clickedButton.disabled = true;
-                }
-
-            } catch (error) {
-                console.error('Fout bij slot verificatie:', error);
-                btn.className = 'btn btn-warning';
-                btn.innerHTML = 'Verificatie mislukt';
-                btn.disabled = false;
-            }
-        }
-
-        function renderTimeSlots(dayKey) {
-            const timePicker = document.getElementById('time-picker');
-            timePicker.innerHTML = '';
-            document.getElementById('booking-form').style.display = 'none';
-            const times = slotsByDay.get(dayKey) || [];
-
-            if (times.length > 0) {
-                times.forEach(slot => {
-                    const btn = document.createElement('button');
-                    let btnClass = '';
-                    if (rippledDays.has(dayKey)) {
-                        btnClass = 'btn btn-outline-success border-success';
-                    } else {
-                        const marginInfo = certaintyInfo[slot.marginCategory] || certaintyInfo.red;
-                        btnClass = `btn ${marginInfo.class} ${marginInfo.borderClass}`;
+                if (data.travelIsKnown) {
+                    rippledDays.add(dayKey);
+                    diagnosticCache.set(dayKey, data.diagnostic);
+                    slotsByDay.set(dayKey, data.updatedGapSlots);
+                    renderDayPicker();
+                    renderTimeSlots(dayKey);
+                    const newBtn = Array.from(document.querySelectorAll('#time-picker .btn')).find(b => b.dataset.start === slot.start);
+                    if (newBtn && data.isViable) {
+                        newBtn.className = 'btn btn-success active';
+                        renderBookingForm();
+                    } else if (newBtn) {
+                        newBtn.className = 'btn btn-danger disabled';
+                        newBtn.disabled = true;
                     }
-                    btn.className = btnClass;
-                    const lang = document.documentElement.lang || 'nl';
-                    btn.textContent = new Date(slot.start).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
-                    btn.dataset.start = slot.start;
-                    btn.dataset.margin = slot.marginCategory;
-                    btn.onclick = () => handleTimeSlotClick(slot, btn);
-                    timePicker.appendChild(btn);
-                });
-            } else {
-                timePicker.innerHTML = `<p class="text-center text-muted">${translations['no_slots_available_on_day'] || 'Geen tijden beschikbaar op deze dag.'}</p>`;
+                } else { // Travel time API failed
+                    btn.disabled = false;
+                    renderTimeSlots(dayKey);
+                    const sameBtn = Array.from(document.querySelectorAll('#time-picker .btn')).find(b => b.dataset.start === slot.start);
+                    if(sameBtn) {
+                        const failedMarginInfo = certaintyInfo[originalCategory || 'red'];
+                        sameBtn.className = `btn ${failedMarginInfo.class} active`;
+                        renderBookingForm(originalCategory);
+                    }
+                }
+            } catch (error) {
+                showError(error.message);
             }
         }
 
-        function handleDayClick(dayKey, dayButton) {
-            document.querySelectorAll('#day-picker .btn').forEach(b => b.classList.remove('active'));
-            dayButton.classList.add('active');
-            renderTimeSlots(dayKey);
+        function renderBookingForm(riskCategory = null) {
+            const container = document.getElementById('booking-form-container');
+            const selectedTime = new Date(selectedSlot.start).toLocaleTimeString(document.documentElement.lang, { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+            let warningHtml = '';
+            if (riskCategory) {
+                const warningKey = `booking_warning_${riskCategory}`;
+                const alertClass = riskCategory === 'red' ? 'danger' : (riskCategory === 'yellow' ? 'warning' : 'primary');
+                warningHtml = `<div class="alert alert-${alertClass}" role="alert" data-i18n="${warningKey}"></div>`;
+            }
+            container.innerHTML = `<div class="card bg-light border-0 mt-4"><div class="card-body">${warningHtml}<h4 class="fs-5 mb-3" data-i18n="schedule_booking_form_title"></h4><p><span data-i18n="booking_for_time"></span> <strong>${selectedTime}</strong></p><form id="booking-form"><div class="row"><div class="col-md-6 mb-3"><label for="name" class="form-label" data-i18n="schedule_booking_form_name"></label><input type="text" id="name" class="form-control" required /></div><div class="col-md-6 mb-3"><label for="email" class="form-label" data-i18n="schedule_booking_form_email"></label><input type="email" id="email" class="form-control" required /></div><div class="col-md-6 mb-3"><label for="phone" class="form-label" data-i18n="schedule_booking_form_phone"></label><input type="tel" id="phone" class="form-control" /></div></div><div class="mb-3"><label for="comments" class="form-label" data-i18n="schedule_booking_form_comments"></label><textarea id="comments" class="form-control" rows="2"></textarea></div><div class="d-grid"><button type="submit" class="btn btn-success btn-lg"><i class="bi bi-check-lg"></i> <span data-i18n="schedule_booking_form_submit"></span></button></div></form></div></div>`;
+            translatePage();
+            document.getElementById('booking-form').addEventListener('submit', handleBookingSubmit);
+        }
+
+        async function handleBookingSubmit(e) {
+            e.preventDefault();
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>`;
+            const name = document.getElementById('name').value, email = document.getElementById('email').value, phone = document.getElementById('phone').value, comments = document.getElementById('comments').value;
+            try {
+                const response = await fetch('/book-appointment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ linkId, startTime: selectedSlot.start, name, email, destinationAddress, phone, comments }),
+                });
+                if (!response.ok) throw new Error('Could not book the appointment.');
+                switchSubView('confirmation-view');
+            } catch (error) { showError(error.message); }
         }
 
         function groupSlotsByDay(rawSlots) {
@@ -381,83 +383,94 @@
             return grouped;
         }
 
+        function formatDuration(seconds) {
+            if (seconds === null || seconds === undefined) return 'N/A';
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.round((seconds % 3600) / 60);
+            let result = '';
+            if (hours > 0) result += `${hours} ${translations['hour_unit'] || 'hour'} `;
+            if (minutes > 0 || hours === 0) result += `${minutes} ${translations['minute_unit'] || 'min'}`;
+            return result.trim();
+        }
+
+        function updateDiagnostics(diagnosticLog) {
+            const diagnosticTableBody = document.getElementById('diagnostic-table-body');
+            if(!diagnosticTableBody) return;
+            diagnosticTableBody.innerHTML = '';
+            if (!diagnosticLog || diagnosticLog.length === 0) { document.getElementById('diagnostic-panel').style.display = 'none'; return; }
+            let totalTravelSeconds = 0;
+            diagnosticLog.forEach(log => {
+                const row = diagnosticTableBody.insertRow();
+                row.insertCell().textContent = log.originAddress || 'Unknown';
+                row.insertCell().textContent = log.destinationAddress || 'Unknown';
+                const statusCell = row.insertCell();
+                statusCell.textContent = log.status;
+                statusCell.classList.add(log.status === 'OK' ? 'text-success' : 'text-danger', 'fw-bold');
+                row.insertCell().textContent = formatDuration(log.duration);
+                if (log.status === 'OK') totalTravelSeconds += log.duration;
+            });
+            const totalDurationSeconds = (appointmentDuration * 60) + totalTravelSeconds;
+            const totalTimeInfo = document.getElementById('total-time-info');
+            if(totalTimeInfo) totalTimeInfo.textContent = `${translations['total_time_label'] || 'Total time (appointment + travel)'}: ${formatDuration(totalDurationSeconds)}`;
+            const panel = document.getElementById('diagnostic-panel');
+            if(panel) panel.style.display = 'block';
+        }
+
         document.getElementById('check-availability-btn').addEventListener('click', async () => {
             destinationAddress = document.getElementById('destinationAddress').value;
-            if (!destinationAddress) {
-                alert(translations['alert_enter_address'] || 'Voer een adres in.');
-                return;
-            }
-            switchView('loading-view');
+            if (!destinationAddress) { alert(translations['alert_enter_address'] || 'Please enter an address.'); return; }
+            switchSubView('booking-view');
+            availabilityResultsEl.style.display = 'none';
+            availabilityLoadingEl.style.display = 'block';
             try {
                 const response = await fetch(`/get-availability?linkId=${linkId}`);
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Kon beschikbaarheid niet ophalen: ${errorText}`);
-                }
-
+                if (!response.ok) { const errorText = await response.text(); throw new Error(`Could not retrieve availability: ${errorText}`); }
                 const data = await response.json();
                 appointmentDuration = data.duration;
-                creatorEmail = data.creatorEmail;
-                appointmentTitle = data.title;
-                document.getElementById('appointment-title-booking').textContent = `🗓️ ${data.title}`;
-                document.getElementById('appointment-description').textContent = data.description;
-                
-                renderDayPicker(data.availableDays, data.initialSlots);
-                switchView('booking-view');
+                slotsByDay = groupSlotsByDay(data.initialSlots);
+                planningWindow = { offset: data.offset, totalDays: data.window };
+                renderDayPicker();
                 displayLegend();
-
-            } catch (error) {
-                showError(error.message);
-            }
+            } catch (error) { showError(error.message); } 
+            finally { availabilityLoadingEl.style.display = 'none'; availabilityResultsEl.style.display = 'block'; }
         });
 
-        document.getElementById('booking-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('name').value;
-            const email = document.getElementById('email').value;
-            const phone = document.getElementById('phone').value;
-
+        async function loadInitialData() {
+            if (!linkId) return showError('Invalid or missing link ID.');
             try {
-                const comments = document.getElementById('comments').value;
-                const response = await fetch('/book-appointment', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ linkId, startTime: selectedSlot.start, name, email, destinationAddress, phone, comments }),
-                });
-                if (!response.ok) throw new Error('Kon de afspraak niet boeken.');
-                switchView('confirmation-view');
-            } catch (error) {
-                showError(error.message);
-            }
-        });
+                const response = await fetch(`/api/link-details?id=${linkId}`);
+                if (!response.ok) throw new Error('Could not load link details.');
+                const data = await response.json();
+                appointmentTitle = data.title;
+                document.getElementById('appointment-title-main').textContent = data.title;
+                document.getElementById('appointment-title-booking').textContent = data.title;
+                if (data.googleMapsApiKey) loadGoogleMapsScript(data.googleMapsApiKey);
+            } catch (error) { showError(error.message); } 
+            finally { elements['initial-loading'].style.display = 'none'; elements['main-content'].style.display = 'block'; switchSubView('address-view'); }
+        }
 
-        async function initMap() {
+        function loadGoogleMapsScript(apiKey) {
+            const script = document.createElement('script');
+            const lang = document.documentElement.lang || 'nl';
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMap&loading=async&language=${lang}`;
+            script.async = true;
+            document.head.appendChild(script);
+        }
+
+        function initMap() {
             try {
-                const { Autocomplete } = await google.maps.importLibrary('places');
                 const input = document.getElementById('destinationAddress');
-                new Autocomplete(input, { types: ['address'], componentRestrictions: { country: 'nl' } });
-            } catch (e) {
-                console.error("Could not load Google Maps Autocomplete", e);
-            }
+                new google.maps.places.Autocomplete(input, { types: ['address'] });
+            } catch (e) { console.error("Could not load Google Maps Autocomplete", e); }
         }
 
-        async function loadGoogleMapsScript() {
-            if (!linkId) return showError('Ongeldige of ontbrekende link-ID.');
-            try {
-                const response = await fetch('/api/config');
-                if (!response.ok) throw new Error('Kon configuratie niet laden.');
-                const config = await response.json();
-                if (!config.mapsApiKey) return;
-
-                const script = document.createElement('script');
-                const lang = document.documentElement.lang || 'nl';
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${config.mapsApiKey}&libraries=places&callback=initMap&loading=async&language=${lang}`;
-                script.async = true;
-                document.head.appendChild(script);
-            } catch (error) {
-                console.error('Error loading Google Maps:', error);
-            }
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            switchView('initial-loading');
+            const checkTranslations = setInterval(() => {
+                if (Object.keys(translations).length > 0) {
+                    clearInterval(checkTranslations);
+                    loadInitialData();
+                }
+            }, 100);
+        });
     </script>
-</body>
-</html>

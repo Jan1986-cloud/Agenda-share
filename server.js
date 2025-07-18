@@ -165,6 +165,26 @@ app.get('/appointments.html', (req, res) => {
 });
 app.get('/schedule.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'schedule.html')));
 
+app.get('/api/link-details', async (req, res) => {
+    const { id } = req.query;
+    if (!id) {
+        return res.status(400).send('Link ID is verplicht.');
+    }
+    try {
+        const { rows } = await pool.query('SELECT title, description FROM links WHERE id = $1', [id]);
+        if (rows.length === 0) {
+            return res.status(404).send('Link niet gevonden.');
+        }
+        res.json({
+            ...rows[0],
+            googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY
+        });
+    } catch (error) {
+        console.error('Error fetching link details:', error);
+        res.status(500).send('Fout bij het ophalen van linkdetails.');
+    }
+});
+
 // --- CRUD API for Links ---
 
 app.get('/api/links', async (req, res) => {
@@ -467,7 +487,8 @@ app.get('/get-availability', async (req, res) => {
                 end: s.end.toISOString(),
                 marginCategory: s.marginCategory 
             })),
-            availableDays,
+            offset: link.planning_offset_days,
+            window: link.planning_window_days,
             linkId,
         });
     } catch (err) {
@@ -576,7 +597,8 @@ app.post('/verify-slot', apiLimiter, async (req, res) => {
             isViable,
             certainty,
             diagnostic: [travelToResult, travelFromResult],
-            updatedGapSlots
+            updatedGapSlots,
+            travelIsKnown
         });
 
     } catch (err) {
