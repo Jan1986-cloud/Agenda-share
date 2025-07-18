@@ -85,7 +85,12 @@ const apiLimiter = (req, res, next) => {
     apiLimiterStore[ip] = apiLimiterStore[ip].filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW_MS);
 
     if (apiLimiterStore[ip].length >= RATE_LIMIT_MAX_REQUESTS) {
-        return res.status(429).send('Te veel aanvragen. Probeer het over 5 minuten opnieuw.');
+        const timeToWait = Math.ceil((apiLimiterStore[ip][0] + RATE_LIMIT_WINDOW_MS - now) / 1000);
+        return res.status(429).json({
+            message: 'Te veel aanvragen. Probeer het over een paar minuten opnieuw.',
+            code: 'TOO_MANY_REQUESTS',
+            retryAfterSeconds: timeToWait > 0 ? timeToWait : 60
+        });
     }
 
     apiLimiterStore[ip].push(now);
@@ -453,7 +458,7 @@ app.delete('/api/appointments/:id', async (req, res) => {
 // --- Availability & Booking API ---
 
 // STAP 1: /get-availability levert alleen de ruwe, ongefilterde slots op basis van de agenda.
-app.get('/get-availability', async (req, res) => {
+app.get('/get-availability', apiLimiter, async (req, res) => {
     const { linkId } = req.query;
     if (!linkId) return res.status(400).send('Link ID is verplicht.');
 
@@ -507,7 +512,7 @@ const getCityFromAddress = (address) => {
 
 
 // STAP 2: Endpoint om een specifiek slot te verifiëren EN het ripple-effect te berekenen.
-app.post('/verify-slot', apiLimiter, async (req, res) => {
+app.post('/verify-slot', async (req, res) => {
     const { linkId, destinationAddress, slotStart } = req.body;
     if (!linkId || !destinationAddress || !slotStart) {
         return res.status(400).send('Link ID, adres en starttijd van het slot zijn verplicht.');
@@ -545,7 +550,22 @@ app.post('/verify-slot', apiLimiter, async (req, res) => {
         ]);
 
         const travelToResult = await getTravelTime(originCoords, destCoords);
+        if (travelToResult.status === 'RATE_LIMIT_EXCEEDED') {
+            return res.status(429).json({
+                code: 'TOO_MANY_REQUESTS',
+                message: 'Rate limit exceeded with travel time provider.',
+                retryAfterSeconds: 60 // Defaulting to 60 seconds
+            });
+        }
+
         const travelFromResult = await getTravelTime(destCoords, nextDestCoords);
+        if (travelFromResult.status === 'RATE_LIMIT_EXCEEDED') {
+            return res.status(429).json({
+                code: 'TOO_MANY_REQUESTS',
+                message: 'Rate limit exceeded with travel time provider.',
+                retryAfterSeconds: 60 // Defaulting to 60 seconds
+            });
+        }
 
         travelToResult.originAddress = getCityFromAddress(originAddress);
         travelToResult.destinationAddress = getCityFromAddress(destinationAddress);
