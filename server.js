@@ -207,53 +207,126 @@ app.get('/api/links', async (req, res) => {
 });
 
 app.post('/api/links', async (req, res) => {
-    if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
-    const { title, description, duration, buffer, availability, startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd, planning_offset_days, planning_window_days } = req.body;
-    if (!title || !duration || !availability || !Array.isArray(availability) || !startAddress || !calendarId) {
-        return res.status(400).send('Ongeldige invoer.');
+    if (!req.session.userId) {
+        return res.status(401).json({ status: 'error', message: 'Authenticatie vereist.', code: 'UNAUTHORIZED' });
     }
+
+    const { title, description, duration, buffer, availability, startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd, planning_offset_days, planning_window_days } = req.body;
+
+    // --- Input Validation ---
+    if (!title || typeof title !== 'string' || title.length > 100) {
+        return res.status(400).json({ status: 'error', message: 'Een geldige titel van maximaal 100 tekens is verplicht.', code: 'VALIDATION_ERROR' });
+    }
+    if (description && (typeof description !== 'string' || description.length > 1000)) {
+        return res.status(400).json({ status: 'error', message: 'Omschrijving mag maximaal 1000 tekens lang zijn.', code: 'VALIDATION_ERROR' });
+    }
+    if (duration === undefined || !Number.isInteger(duration) || duration <= 0) {
+        return res.status(400).json({ status: 'error', message: 'Een geldige, positieve duur in minuten is verplicht.', code: 'VALIDATION_ERROR' });
+    }
+    if (buffer === undefined || !Number.isInteger(buffer) || buffer < 0) {
+        return res.status(400).json({ status: 'error', message: 'Een geldige, niet-negatieve buffer in minuten is verplicht.', code: 'VALIDATION_ERROR' });
+    }
+    if (!startAddress || typeof startAddress !== 'string' || startAddress.length > 300) {
+        return res.status(400).json({ status: 'error', message: 'Een geldig startadres van maximaal 300 tekens is verplicht.', code: 'VALIDATION_ERROR' });
+    }
+    if (!calendarId || typeof calendarId !== 'string') {
+        return res.status(400).json({ status: 'error', message: 'Een geldig kalender ID is verplicht.', code: 'VALIDATION_ERROR' });
+    }
+    // TODO: Add more specific validation for availability structure, maxTravelTime, etc.
+
     try {
         const linkId = uuidv4();
         await pool.query(
             'INSERT INTO links (id, user_id, title, description, duration, buffer, availability, start_address, calendar_id, max_travel_time, workday_mode, include_travel_start, include_travel_end, planning_offset_days, planning_window_days) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)',
-            [linkId, req.session.userId, title, description, parseInt(duration, 10), parseInt(buffer, 10) || 0, JSON.stringify(availability), startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd, parseInt(planning_offset_days, 10) || 0, parseInt(planning_window_days, 10) || 14]
+            [linkId, req.session.userId, title, description, duration, buffer, JSON.stringify(availability), startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd, planning_offset_days || 0, planning_window_days || 14]
         );
-        res.status(201).json({ linkId });
+        res.status(201).json({ status: 'success', linkId });
     } catch (error) {
-        console.error('Error creating link:', error);
-        res.status(500).send('Fout bij het aanmaken van de link.');
+        console.error('[CREATE_LINK_ERROR]', error);
+        res.status(500).json({ status: 'error', message: 'Fout bij het aanmaken van de link.', code: 'INTERNAL_SERVER_ERROR' });
     }
 });
 
 app.put('/api/links/:id', async (req, res) => {
-    if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
+    if (!req.session.userId) {
+        return res.status(401).json({ status: 'error', message: 'Authenticatie vereist.', code: 'UNAUTHORIZED' });
+    }
+    
     const { id } = req.params;
     const { title, description, duration, buffer, availability, startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd, planning_offset_days, planning_window_days } = req.body;
-    if (!title || !duration || !availability || !Array.isArray(availability) || !startAddress || !calendarId) {
-        return res.status(400).send('Ongeldige invoer.');
+
+    // --- Input Validation ---
+    if (!title || typeof title !== 'string' || title.length > 100) {
+        return res.status(400).json({ status: 'error', message: 'Een geldige titel van maximaal 100 tekens is verplicht.', code: 'VALIDATION_ERROR' });
     }
+    if (description && (typeof description !== 'string' || description.length > 1000)) {
+        return res.status(400).json({ status: 'error', message: 'Omschrijving mag maximaal 1000 tekens lang zijn.', code: 'VALIDATION_ERROR' });
+    }
+    if (duration === undefined || !Number.isInteger(duration) || duration <= 0) {
+        return res.status(400).json({ status: 'error', message: 'Een geldige, positieve duur in minuten is verplicht.', code: 'VALIDATION_ERROR' });
+    }
+    if (buffer === undefined || !Number.isInteger(buffer) || buffer < 0) {
+        return res.status(400).json({ status: 'error', message: 'Een geldige, niet-negatieve buffer in minuten is verplicht.', code: 'VALIDATION_ERROR' });
+    }
+    if (!startAddress || typeof startAddress !== 'string' || startAddress.length > 300) {
+        return res.status(400).json({ status: 'error', message: 'Een geldig startadres van maximaal 300 tekens is verplicht.', code: 'VALIDATION_ERROR' });
+    }
+    if (!calendarId || typeof calendarId !== 'string') {
+        return res.status(400).json({ status: 'error', message: 'Een geldig kalender ID is verplicht.', code: 'VALIDATION_ERROR' });
+    }
+    // TODO: Add more specific validation for availability, maxTravelTime, etc.
+
     try {
-        const { rowCount } = await pool.query(
-            'UPDATE links SET title = $1, description = $2, duration = $3, buffer = $4, availability = $5, start_address = $6, calendar_id = $7, max_travel_time = $8, workday_mode = $9, include_travel_start = $10, include_travel_end = $11, planning_offset_days = $12, planning_window_days = $13 WHERE id = $14 AND user_id = $15',
-            [title, description, parseInt(duration, 10), parseInt(buffer, 10) || 0, JSON.stringify(availability), startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd, parseInt(planning_offset_days, 10) || 0, parseInt(planning_window_days, 10) || 14, id, req.session.userId]
+        // --- Ownership Check ---
+        const { rows: [link] } = await pool.query('SELECT user_id FROM links WHERE id = $1', [id]);
+
+        if (!link) {
+            return res.status(404).json({ status: 'error', message: 'Link niet gevonden.', code: 'NOT_FOUND' });
+        }
+
+        if (link.user_id !== req.session.userId) {
+            return res.status(403).json({ status: 'error', message: 'U heeft geen toestemming om deze link te bewerken.', code: 'FORBIDDEN' });
+        }
+
+        // --- Update Query ---
+        await pool.query(
+            'UPDATE links SET title = $1, description = $2, duration = $3, buffer = $4, availability = $5, start_address = $6, calendar_id = $7, max_travel_time = $8, workday_mode = $9, include_travel_start = $10, include_travel_end = $11, planning_offset_days = $12, planning_window_days = $13 WHERE id = $14',
+            [title, description, duration, buffer, JSON.stringify(availability), startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd, planning_offset_days, planning_window_days, id]
         );
-        if (rowCount === 0) return res.status(404).send('Link niet gevonden of geen toestemming.');
-        res.status(200).send('Link succesvol bijgewerkt.');
+        
+        res.status(200).json({ status: 'success', message: 'Link succesvol bijgewerkt.' });
     } catch (error) {
-        console.error('Error updating link:', error);
-        res.status(500).send('Fout bij het bijwerken van de link.');
+        console.error(`[UPDATE_LINK_ERROR] linkId: ${id} -`, error);
+        res.status(500).json({ status: 'error', message: 'Fout bij het bijwerken van de link.', code: 'INTERNAL_SERVER_ERROR' });
     }
 });
 
 app.delete('/api/links/:id', async (req, res) => {
-    if (!req.session.userId) return res.status(401).send('Authenticatie vereist.');
+    if (!req.session.userId) {
+        return res.status(401).json({ status: 'error', message: 'Authenticatie vereist.', code: 'UNAUTHORIZED' });
+    }
+
+    const { id } = req.params;
+
     try {
-        const { rowCount } = await pool.query('DELETE FROM links WHERE id = $1 AND user_id = $2', [req.params.id, req.session.userId]);
-        if (rowCount === 0) return res.status(404).send('Link niet gevonden of geen toestemming.');
-        res.status(204).send();
+        // --- Ownership Check ---
+        const { rows: [link] } = await pool.query('SELECT user_id FROM links WHERE id = $1', [id]);
+
+        if (!link) {
+            return res.status(404).json({ status: 'error', message: 'Link niet gevonden.', code: 'NOT_FOUND' });
+        }
+
+        if (link.user_id !== req.session.userId) {
+            return res.status(403).json({ status: 'error', message: 'U heeft geen toestemming om deze link te verwijderen.', code: 'FORBIDDEN' });
+        }
+
+        // --- Delete Query ---
+        await pool.query('DELETE FROM links WHERE id = $1', [id]);
+        
+        res.status(204).send(); // No Content
     } catch (error) {
-        console.error('Error deleting link:', error);
-        res.status(500).send('Fout bij het verwijderen van de link.');
+        console.error(`[DELETE_LINK_ERROR] linkId: ${id} -`, error);
+        res.status(500).json({ status: 'error', message: 'Fout bij het verwijderen van de link.', code: 'INTERNAL_SERVER_ERROR' });
     }
 });
 
@@ -502,26 +575,53 @@ app.get('/get-availability', apiLimiter, async (req, res) => {
     }
 });
 
-// Functie om alleen de plaatsnaam uit een adres te halen
+// Functie om alleen de plaatsnaam uit een adres te halen, zonder postcode.
 const getCityFromAddress = (address) => {
     if (!address) return 'Onbekende locatie';
     const parts = address.split(',');
-    // Pakt meestal het deel voor de postcode, wat vaak de stad is.
-    return parts.length > 1 ? parts[parts.length - 2].trim() : parts[0].trim();
+    
+    // Neem het deel van het adres dat het meest waarschijnlijk de stad bevat.
+    let cityPart = parts.length > 1 ? parts[parts.length - 2] : parts[0];
+    
+    // Verwijder een Nederlandse postcode (bv. 1234 AB) uit dit deel.
+    const cityOnly = cityPart.trim().replace(/\d{4}\s?[A-Z]{2}/, '').trim();
+    
+    // Verwijder eventuele overgebleven komma's.
+    const finalCity = cityOnly.replace(/,/, '').trim();
+
+    // Als het resultaat leeg is (bv. omdat het alleen een postcode was), 
+    // val dan terug op het eerste deel van het adres.
+    if (!finalCity) {
+        return parts[0].trim();
+    }
+    
+    return finalCity;
 };
 
 
 // STAP 2: Endpoint om een specifiek slot te verifiëren EN het ripple-effect te berekenen.
 app.post('/verify-slot', async (req, res) => {
     const { linkId, destinationAddress, slotStart } = req.body;
-    if (!linkId || !destinationAddress || !slotStart) {
-        return res.status(400).send('Link ID, adres en starttijd van het slot zijn verplicht.');
+
+    // --- Input Validation ---
+    if (!linkId || typeof linkId !== 'string') {
+        return res.status(400).json({ status: 'error', message: 'Een geldig link ID is verplicht.', code: 'VALIDATION_ERROR' });
+    }
+    if (!destinationAddress || typeof destinationAddress !== 'string' || destinationAddress.length > 300) {
+        return res.status(400).json({ status: 'error', message: 'Een geldig adres van maximaal 300 tekens is verplicht.', code: 'VALIDATION_ERROR' });
+    }
+    if (!slotStart || isNaN(new Date(slotStart).getTime())) {
+        return res.status(400).json({ status: 'error', message: 'Een geldige starttijd (ISO 8601 formaat) is verplicht.', code: 'VALIDATION_ERROR' });
     }
 
     try {
         const { rows: [link] } = await pool.query('SELECT * FROM links WHERE id = $1', [linkId]);
-        if (!link) return res.status(404).json({ error: 'linkId not found' });
-        if (typeof link.availability === 'string') link.availability = JSON.parse(link.availability);
+        if (!link) {
+            return res.status(404).json({ status: 'error', message: 'De opgegeven link kon niet worden gevonden.', code: 'NOT_FOUND' });
+        }
+        if (typeof link.availability === 'string') {
+            link.availability = JSON.parse(link.availability);
+        }
 
         const auth = await getAuthenticatedClient(link.user_id);
         const potentialStart = new Date(slotStart);
@@ -622,24 +722,50 @@ app.post('/verify-slot', async (req, res) => {
         });
 
     } catch (err) {
-        console.error('Error in /verify-slot:', err);
-        res.status(500).send('Fout bij verifiëren van het slot.');
+        // Log the full error server-side for debugging
+        console.error(`[VERIFY_SLOT_ERROR] linkId: ${linkId} -`, err);
+        // Send a generic, safe error message to the client
+        res.status(500).json({ status: 'error', message: 'Er is een onverwachte serverfout opgetreden bij het verifiëren van het tijdslot.', code: 'INTERNAL_SERVER_ERROR' });
     }
 });
 
 
 app.post('/book-appointment', async (req, res) => {
     const { linkId, startTime, name, email, destinationAddress, phone, comments } = req.body;
-    if (!linkId || !startTime || !name || !email || !destinationAddress || !phone) {
-        return res.status(400).send('Alle velden zijn verplicht.');
+
+    // --- Input Validation ---
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!linkId || typeof linkId !== 'string') {
+        return res.status(400).json({ status: 'error', message: 'Een geldig link ID is verplicht.', code: 'VALIDATION_ERROR' });
     }
+    if (!startTime || isNaN(new Date(startTime).getTime())) {
+        return res.status(400).json({ status: 'error', message: 'Een geldige starttijd (ISO 8601 formaat) is verplicht.', code: 'VALIDATION_ERROR' });
+    }
+    if (!name || typeof name !== 'string' || name.length > 100) {
+        return res.status(400).json({ status: 'error', message: 'Een geldige naam van maximaal 100 tekens is verplicht.', code: 'VALIDATION_ERROR' });
+    }
+    if (!email || typeof email !== 'string' || !emailRegex.test(email)) {
+        return res.status(400).json({ status: 'error', message: 'Een geldig e-mailadres is verplicht.', code: 'VALIDATION_ERROR' });
+    }
+    if (!destinationAddress || typeof destinationAddress !== 'string' || destinationAddress.length > 300) {
+        return res.status(400).json({ status: 'error', message: 'Een geldig adres van maximaal 300 tekens is verplicht.', code: 'VALIDATION_ERROR' });
+    }
+    if (!phone || typeof phone !== 'string' || phone.length > 50) {
+        return res.status(400).json({ status: 'error', message: 'Een geldig telefoonnummer van maximaal 50 tekens is verplicht.', code: 'VALIDATION_ERROR' });
+    }
+    if (comments && (typeof comments !== 'string' || comments.length > 1000)) {
+        return res.status(400).json({ status: 'error', message: 'Opmerkingen mogen maximaal 1000 tekens lang zijn.', code: 'VALIDATION_ERROR' });
+    }
+
     try {
         const { rows: [link] } = await pool.query('SELECT * FROM links WHERE id = $1', [linkId]);
-        if (!link) return res.status(404).send('Link niet gevonden.');
+        if (!link) {
+            return res.status(404).json({ status: 'error', message: 'De opgegeven link kon niet worden gevonden.', code: 'NOT_FOUND' });
+        }
 
         const { rows: [dbAppointment] } = await pool.query(
             'INSERT INTO appointments (link_id, user_id, name, email, phone, comments, appointment_time, destination_address) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
-            [linkId, link.user_id, name, email, phone, comments, startTime, destinationAddress]
+            [linkId, link.user_id, name, email, phone, comments || null, startTime, destinationAddress]
         );
 
         const auth = await getAuthenticatedClient(link.user_id);
@@ -678,10 +804,10 @@ app.post('/book-appointment', async (req, res) => {
             );
         }
 
-        res.status(200).send('Afspraak succesvol ingepland.');
+        res.status(200).json({ status: 'success', message: 'Afspraak succesvol ingepland.' });
     } catch (error) {
-        console.error('Error creating event:', error);
-        res.status(500).send('Fout bij het aanmaken van de afspraak.');
+        console.error(`[BOOK_APPOINTMENT_ERROR] linkId: ${linkId} -`, error);
+        res.status(500).json({ status: 'error', message: 'Er is een onverwachte serverfout opgetreden bij het aanmaken van de afspraak.', code: 'INTERNAL_SERVER_ERROR' });
     }
 });
 
