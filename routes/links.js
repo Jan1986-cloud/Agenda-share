@@ -1,14 +1,42 @@
 // Bestand: routes/links.js
 
 import express from 'express';
-import { v4 as uuidv4 } from 'uuid';
-import { pool } from '../db.js';
+import db from '../db.js'; // Gebruik de Knex instance
+import { body, param, validationResult } from 'express-validator';
 import { apiRoutes } from '../shared/apiRoutes.js';
+import logger from '../utils/logger.js';
 
 const router = express.Router();
 const paths = apiRoutes.links;
 
-// Middleware to check for authentication using Passport
+// --- Validation Rules ---
+const createLinkValidationRules = [
+    body('title').notEmpty().trim().withMessage('Titel is verplicht.'),
+    body('description').optional({ checkFalsy: true }).trim(),
+    body('duration').isInt({ min: 1 }).withMessage('Duur moet een positief getal zijn.'),
+    body('buffer').isInt({ min: 0 }).withMessage('Buffer moet een getal zijn (0 of hoger).'),
+    body('availability').isJSON().withMessage('Beschikbaarheid moet een geldige JSON-string zijn.'),
+    body('startAddress').notEmpty().trim().withMessage('Startadres is verplicht.'),
+    body('calendarId').notEmpty().trim().withMessage('Agenda ID is verplicht.'),
+    body('maxTravelTime').optional({ checkFalsy: true }).isInt({ min: 1 }).withMessage('Maximale reistijd moet een positief getal zijn.'),
+    body('workdayMode').isIn(['VAST', 'DYNAMISCH']).withMessage('Werkdagmodus is ongeldig.'),
+    body('includeTravelStart').isBoolean().withMessage('Inclusief reistijd (start) moet een boolean zijn.'),
+    body('includeTravelEnd').isBoolean().withMessage('Inclusief reistijd (eind) moet een boolean zijn.'),
+    body('planning_offset_days').isInt({ min: 0 }).withMessage('Planning offset moet een getal zijn (0 of hoger).'),
+    body('planning_window_days').isInt({ min: 1 }).withMessage('Planning-venster moet een positief getal zijn.')
+];
+
+const updateLinkValidationRules = [
+    param('id').isUUID().withMessage('Ongeldig link ID formaat.'),
+    ...createLinkValidationRules // Hergebruik dezelfde body validaties
+];
+
+const idParamValidationRules = [
+    param('id').isUUID().withMessage('Ongeldig link ID formaat.')
+];
+
+
+// --- Middleware ---
 const isAuthenticated = (req, res, next) => {
     if (req.isAuthenticated()) {
         return next();
@@ -16,109 +44,137 @@ const isAuthenticated = (req, res, next) => {
     res.status(401).json({ status: 'error', message: 'Authenticatie vereist.', code: 'UNAUTHORIZED' });
 };
 
+const handleValidationErrors = (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ status: 'error', message: 'Validatiefout.', errors: errors.array(), code: 'VALIDATION_ERROR' });
+    }
+    next();
+};
+
+
+// --- Routes ---
+
 // GET all links for the logged-in user
-router.get(paths.getAll, isAuthenticated, async (req, res) => {
+router.get(paths.getAll, isAuthenticated, async (req, res, next) => {
     try {
-        const { rows } = await pool.query('SELECT * FROM links WHERE user_id = $1 ORDER BY created_at DESC', [req.user.id]);
-        res.json(rows);
+        const links = await db('links')
+            .where('user_id', req.user.id)
+            .orderBy('created_at', 'desc');
+        res.json(links);
     } catch (error) {
-        console.error('Error fetching links:', error);
-        res.status(500).json({ message: error.message, stack: error.stack });
+        next(error);
     }
 });
 
 // GET a single link by ID
-router.get(paths.getById(':id'), isAuthenticated, async (req, res) => {
+router.get(paths.getById(':id'), isAuthenticated, idParamValidationRules, handleValidationErrors, async (req, res, next) => {
     try {
-        const { rows } = await pool.query('SELECT * FROM links WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
-        if (rows.length === 0) {
+        const link = await db('links')
+            .where({ id: req.params.id, user_id: req.user.id })
+            .first();
+
+        if (!link) {
             return res.status(404).send('Link niet gevonden of geen toestemming.');
         }
-        res.json(rows[0]);
+        res.json(link);
     } catch (error) {
-        console.error('Error fetching single link:', error);
-        res.status(500).send('Fout bij het ophalen van de link.');
+        next(error);
     }
 });
 
 // POST a new link
-router.post(paths.create, isAuthenticated, async (req, res) => {
-    const { title, description, duration, buffer, availability, startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd, planning_offset_days, planning_window_days } = req.body;
-    if (!title || !duration || !buffer || !startAddress || !calendarId) {
-        return res.status(400).json({ status: 'error', message: 'Required fields are missing.', code: 'VALIDATION_ERROR' });
-    }
+router.post(paths.create, isAuthenticated, createLinkValidationRules, handleValidationErrors, async (req, res, next) => {
     try {
-        const linkId = uuidv4();
-        await pool.query(
-            'INSERT INTO links (id, user_id, title, description, duration, buffer, availability, start_address, calendar_id, max_travel_time, workday_mode, include_travel_start, include_travel_end, planning_offset_days, planning_window_days) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)',
-            [linkId, req.user.id, title, description, parseInt(duration), parseInt(buffer), JSON.stringify(availability), startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd, planning_offset_days || 0, planning_window_days || 14]
-        );
-        res.status(201).json({ status: 'success', linkId });
+        const { title, description, duration, buffer, availability, startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd, planning_offset_days, planning_window_days } = req.body;
+        
+        const newLinkData = {
+            user_id: req.user.id,
+            title,
+            description,
+            duration,
+            buffer,
+            availability, // Wordt al als JSON gevalideerd
+            start_address: startAddress,
+            calendar_id: calendarId,
+            max_travel_time: maxTravelTime,
+            workday_mode: workdayMode,
+            include_travel_start: includeTravelStart,
+            include_travel_end: includeTravelEnd,
+            planning_offset_days,
+            planning_window_days
+        };
+
+        const [insertedLink] = await db('links').insert(newLinkData).returning('id');
+        
+        res.status(201).json({ status: 'success', linkId: insertedLink.id });
     } catch (error) {
-        console.error('[CREATE_LINK_ERROR]', error);
-        res.status(500).json({ status: 'error', message: 'Fout bij het aanmaken van de link.', code: 'INTERNAL_SERVER_ERROR' });
+        next(error);
     }
 });
 
 // PUT (update) an existing link
-router.put(paths.update(':id'), isAuthenticated, async (req, res) => {
-    const { id } = req.params;
-    const { title, description, duration, buffer, availability, startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd, planning_offset_days, planning_window_days } = req.body;
-    
+router.put(paths.update(':id'), isAuthenticated, updateLinkValidationRules, handleValidationErrors, async (req, res, next) => {
     try {
-        const { rows: [link] } = await pool.query('SELECT user_id FROM links WHERE id = $1', [id]);
+        const { id } = req.params;
+        const link = await db('links').where('id', id).select('user_id').first();
         if (!link || link.user_id !== req.user.id) {
             return res.status(403).json({ status: 'error', message: 'Geen toestemming.', code: 'FORBIDDEN' });
         }
 
-        await pool.query(
-            'UPDATE links SET title = $1, description = $2, duration = $3, buffer = $4, availability = $5, start_address = $6, calendar_id = $7, max_travel_time = $8, workday_mode = $9, include_travel_start = $10, include_travel_end = $11, planning_offset_days = $12, planning_window_days = $13 WHERE id = $14',
-            [title, description, duration, buffer, JSON.stringify(availability), startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd, planning_offset_days, planning_window_days, id]
-        );
+        const { title, description, duration, buffer, availability, startAddress, calendarId, maxTravelTime, workdayMode, includeTravelStart, includeTravelEnd, planning_offset_days, planning_window_days } = req.body;
+        const updatedData = {
+            title, description, duration, buffer, availability,
+            start_address: startAddress,
+            calendar_id: calendarId,
+            max_travel_time: maxTravelTime,
+            workday_mode: workdayMode,
+            include_travel_start: includeTravelStart,
+            include_travel_end: includeTravelEnd,
+            planning_offset_days,
+            planning_window_days
+        };
+
+        await db('links').where('id', id).update(updatedData);
+        
         res.status(200).json({ status: 'success', message: 'Link succesvol bijgewerkt.' });
     } catch (error) {
-        console.error(`[UPDATE_LINK_ERROR] linkId: ${id} -`, error);
-        res.status(500).json({ status: 'error', message: 'Fout bij het bijwerken van de link.', code: 'INTERNAL_SERVER_ERROR' });
+        next(error);
     }
 });
 
 // DELETE a link
-router.delete(paths.delete(':id'), isAuthenticated, async (req, res) => {
-    const { id } = req.params;
+router.delete(paths.delete(':id'), isAuthenticated, idParamValidationRules, handleValidationErrors, async (req, res, next) => {
     try {
-        const { rows: [link] } = await pool.query('SELECT user_id FROM links WHERE id = $1', [id]);
-        if (!link || link.user_id !== req.user.id) {
-            return res.status(403).json({ status: 'error', message: 'Geen toestemming.', code: 'FORBIDDEN' });
+        const { id } = req.params;
+        const link = await db('links').where({ id: id, user_id: req.user.id }).first();
+        if (!link) {
+            return res.status(403).json({ status: 'error', message: 'Geen toestemming of link niet gevonden.', code: 'FORBIDDEN' });
         }
-        await pool.query('DELETE FROM links WHERE id = $1', [id]);
+        await db('links').where('id', id).del();
         res.status(204).send();
     } catch (error) {
-        console.error(`[DELETE_LINK_ERROR] linkId: ${id} -`, error);
-        res.status(500).json({ status: 'error', message: 'Fout bij het verwijderen van de link.', code: 'INTERNAL_SERVER_ERROR' });
+        next(error);
     }
 });
 
 // POST to duplicate a link
-router.post(paths.duplicate(':id'), isAuthenticated, async (req, res) => {
-    const { id } = req.params;
+router.post(paths.duplicate(':id'), isAuthenticated, idParamValidationRules, handleValidationErrors, async (req, res, next) => {
     try {
-        const { rows: [originalLink] } = await pool.query('SELECT * FROM links WHERE id = $1 AND user_id = $2', [id, req.user.id]);
+        const { id } = req.params;
+        const originalLink = await db('links').where({ id: id, user_id: req.user.id }).first();
         if (!originalLink) {
             return res.status(404).send('Originele link niet gevonden.');
         }
 
-        const newLink = { ...originalLink };
-        newLink.id = uuidv4();
-        newLink.title = `${originalLink.title} (kopie)`;
+        delete originalLink.id; 
+        originalLink.title = `${originalLink.title} (kopie)`;
         
-        await pool.query(
-            'INSERT INTO links (id, user_id, title, description, duration, buffer, availability, start_address, calendar_id, max_travel_time, workday_mode, include_travel_start, include_travel_end, planning_offset_days, planning_window_days) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)',
-            [newLink.id, newLink.user_id, newLink.title, newLink.description, newLink.duration, newLink.buffer, JSON.stringify(newLink.availability), newLink.start_address, newLink.calendar_id, newLink.max_travel_time, newLink.workday_mode, newLink.include_travel_start, newLink.include_travel_end, newLink.planning_offset_days, newLink.planning_window_days]
-        );
+        const [newLink] = await db('links').insert(originalLink).returning('*');
+
         res.status(201).json({ message: 'Link succesvol gedupliceerd.', newLink });
     } catch (error) {
-        console.error('Error duplicating link:', error);
-        res.status(500).send('Fout bij het dupliceren van de link.');
+        next(error);
     }
 });
 

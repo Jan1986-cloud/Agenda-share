@@ -35,7 +35,7 @@ Dit is de kern van de logica, die zich in drie scenario's kan ontvouwen:
 *   **Scenario C: Verificatie Mislukt (API-fout)**
     *   De externe API voor reistijd (bv. Google Maps) geeft een fout terug of het adres is onvindbaar.
     *   Het **geselecteerde** tijdslot wordt **volledig gekleurd** in zijn oorspronkelijke risicokleur (rood, geel of blauw).
-    *   Het boekingsformulier verschijnt **mét een duidelijke waarschuwing** die het risico uitlegt.
+    *   Het boekingsformulier verschijnt **mét een duidelijke waarschuwen** die het risico uitlegt.
     *   De klant kan de afspraak alsnog boeken en accepteert daarmee bewust het risico.
 
 ---
@@ -75,3 +75,98 @@ Deze notities zijn echter niet meer volledig representatief voor de huidige staa
 
 3.  **Het Huidige Resultaat: Een Product Klaar voor de Markt**
     De applicatie is nu meer dan een verzameling functies. Het is een coherent product met een duidelijke visuele identiteit, een overtuigende boodschap en een verfijnde, intelligente gebruikerservaring. De basis is gelegd voor toekomstige uitbreidingen, zoals een admin-dashboard voor upselling.
+
+---
+
+### Sessie Log: Backend Professionalisering (21 Juli 2025)
+
+In deze sessie is een reeks fundamentele verbeteringen aan de backend van de applicatie doorgevoerd, gericht op stabiliteit, veiligheid en onderhoudbaarheid.
+
+| Stap | Actie | Technologie/Tool | Omschrijving |
+| :--- | :--- | :--- | :--- |
+| 1. **DB Migraties** | Formeel migratiesysteem opgezet. | `knex.js` | De ad-hoc tabelcreatie in `db.js` is vervangen door een robuust migratiesysteem. Alle database-queries in de applicatie zijn omgezet naar de Knex query builder, wat SQL-injection voorkomt en de code beter leesbaar maakt. |
+| 2. **Input Validatie** | Inkomende API-data gevalideerd. | `express-validator` | Alle API-routes die data ontvangen (`POST`, `PUT`) zijn voorzien van strikte validatie- en sanitatieregels. Dit beschermt de applicatie tegen ongeldige data en XSS-aanvallen. |
+| 3. **Logging** | Gestructureerde logging geïmplementeerd. | `winston` | Alle `console.log` en `console.error` aanroepen in de backend zijn vervangen door een gestructureerde JSON-logger. Dit maakt debugging en monitoring in productie aanzienlijk eenvoudiger. |
+| 4. **Frontend Refactor** | Basis gelegd voor frontend-migratie. | `react`, `vite` | Een nieuwe `frontend` map is opgezet met React en Vite. De `dashboard.html` pagina is als eerste volledig omgezet naar een modern React-component, inclusief client-side routing en een proxy voor de API. |
+| 5. **Foutafhandeling** | Centrale API-foutafhandeling. | `express` middleware | Een centrale "vangnet" middleware is toegevoegd aan `server.js`. Alle onverwachte fouten in de API worden nu op een consistente en veilige manier afgehandeld, wat de frontend-code vereenvoudigt. |
+
+---
+
+### Kernprincipes voor Verdere Ontwikkeling
+
+1.  **Single Source of Truth:**
+    *   **API Routes:** Alle API-paden moeten worden gedefinieerd in `shared/apiRoutes.js`. Zowel de frontend als de backend moeten deze definities importeren. Dit voorkomt mismatches en typefouten. **NOOIT** API-URL's hardcoderen.
+    *   **Teksten (i18n):** Alle gebruiker-zichtbare teksten moeten in de `locales/*.json` bestanden staan en worden geladen via de i18n-module. **NOOIT** teksten hardcoderen in de HTML of JavaScript.
+2.  **SPA Routing:**
+    *   **Interne Navigatie:** Binnen de React-applicatie moet alle navigatie tussen "pagina's" (componenten) gebeuren met de `<Link>` component van `react-router-dom`.
+    *   **Externe Links:** Standaard `<a href="...">` tags mogen alleen worden gebruikt voor links naar externe websites of voor de "Log uit" functionaliteit.
+
+---
+
+### Overzicht: Van Traditionele Applicatie naar Moderne API & SPA
+
+Het doel van deze refactoring was om de applicatie te transformeren van een verzameling losse bestanden met gemengde logica naar een professionele, veilige en schaalbare architectuur. Dit is gedaan door de backend om te vormen tot een pure, data-gerichte API en de frontend te herbouwen als een moderne Single-Page Application (SPA).
+
+---
+
+### Fase 1: Fundament & Database Professionalisering
+
+De eerste en meest kritieke stap was het vervangen van de ad-hoc database-interacties door een robuust en voorspelbaar systeem.
+
+| Actie | Technologie | Bestanden Gewijzigd / Aangemaakt | Omschrijving |
+| :--- | :--- | :--- | :--- |
+| **Installatie** | `knex`, `pg` | `package.json` | De benodigde libraries voor database-migraties en query building zijn geïnstalleerd. |
+| **Configuratie** | `knex` | `knexfile.cjs` (aangemaakt) | Een centraal configuratiebestand voor de databaseverbindingen (development, production) is opgezet. |
+| **Migratiebestand** | `knex` | `migrations/..._initial_schema_setup.cjs` (aangemaakt) | De volledige databasestructuur (alle tabellen, kolommen, relaties) is vastgelegd in een versie-gecontroleerd migratiebestand. |
+| **DB Connectie Refactor** | `knex` | `db.js` | De oude `pg` pool is vervangen door een centrale Knex-instantie, die nu de standaard is voor alle database-interacties. |
+| **Server Opstartlogica** | `knex` | `server.js` | De oude `createTables()` functie is verwijderd. De server voert nu bij het opstarten automatisch de `knex migrate:latest` uit om de database-structuur te garanderen. |
+| **Query Refactoring** | `knex` | Alle bestanden in `routes/`, `services/`, `config/` | **Dit was de grootste wijziging.** Alle handgeschreven SQL-queries (`pool.query(...)`) in de gehele applicatie zijn systematisch vervangen door de veilige en leesbare Knex query builder. |
+
+---
+
+### Fase 2: Beveiliging & Input Validatie
+
+Om de applicatie te beschermen tegen ongeldige data en aanvallen, is een validatielaag toegevoegd.
+
+| Actie | Technologie | Bestanden Gewijzigd | Omschrijving |
+| :--- | :--- | :--- | :--- |
+| **Installatie** | `express-validator` | `package.json` | De library voor het valideren van inkomende API-verzoeken is geïnstalleerd. |
+| **Implementatie** | `express-validator` | `routes/links.js`, `routes/appointments.js`, `routes/api.js` | Alle API-routes die data accepteren zijn voorzien van strikte validatieregels (bv. controleren op UUID's, e-mailadressen, verplichte velden). Een centrale `handleValidationErrors` middleware zorgt voor consistente foutmeldingen. |
+
+---
+
+### Fase 3: Stabiliteit & Gestructureerde Logging
+
+Om debugging en monitoring in productie mogelijk te maken, is de `console.log` vervangen door een professioneel logging-systeem.
+
+| Actie | Technologie | Bestanden Gewijzigd / Aangemaakt | Omschrijving |
+| :--- | :--- | :--- | :--- |
+| **Installatie** | `winston` | `package.json` | De library voor gestructureerde logging is geïnstalleerd. |
+| **Configuratie** | `winston` | `utils/logger.js` (aangemaakt) | Een centrale logger is geconfigureerd om alle output als gestructureerde JSON naar de console te schrijven. |
+| **Implementatie** | `winston` | Alle backend-bestanden (`server.js`, `db.js`, `routes/*`, `services/*`, `utils/*`) | Alle `console.log`, `console.error` en `console.warn` aanroepen zijn vervangen door de nieuwe logger, inclusief extra context (bv. `userId`, `linkId`) voor betere traceerbaarheid. |
+
+---
+
+### Fase 4: Frontend Modernisering (React & Vite)
+
+De vanille JavaScript frontend is gemigreerd naar een moderne Single-Page Application architectuur.
+
+| Actie | Technologie | Bestanden Gewijzigd / Aangemaakt | Omschrijving |
+| :--- | :--- | :--- | :--- |
+| **Project Setup** | `react`, `vite` | `frontend/` (map aangemaakt), `frontend/package.json`, `frontend/vite.config.js` | Een volledig nieuw, opzichzelfstaand frontend-project is opgezet in de `frontend` map. |
+| **Basisstructuur** | `react` | `frontend/index.html`, `frontend/src/main.jsx`, `frontend/src/App.jsx` | De basis-entrypoints en het hoofdcomponent voor de React-applicatie zijn aangemaakt. |
+| **Dashboard Refactor** | `react` | `frontend/src/Dashboard.jsx` (aangemaakt) | De volledige inhoud en logica van de oude `public/dashboard.html` is omgezet naar een modern, data-gedreven React-component. |
+| **Verwijdering Oude Code** | - | `public/` (map verwijderd) | De oude `public` map met alle losse HTML-, CSS- en JS-bestanden is volledig verwijderd. |
+| **Server Integratie** | `express` | `server.js` | De Express-server is aangepast om in productie de gebouwde bestanden van de React-app te serveren en alle pagina-verzoeken af te vangen. |
+
+---
+
+### Fase 5 & 6: Foutafhandeling & Deploy-Fixes
+
+De laatste fase bestond uit het robuuster maken van de foutafhandeling en het oplossen van een reeks configuratieproblemen die tijdens de deployment naar Railway aan het licht kwamen.
+
+| Actie | Technologie | Bestanden Gewijzigd | Omschrijving |
+| :--- | :--- | :--- | :--- |
+| **Centrale Foutafhandeling** | `express` | `server.js`, `routes/*` | Een centrale "vangnet" middleware is toegevoegd. Alle `catch`-blokken in de routes geven fouten nu door aan deze handler (`next(error)`), wat de code vereenvoudigt. |
+| **Deployment Fixes** | `npm`, `knex`, `react-router` | `package.json`, `frontend/package.json`, `migrations/*`, `frontend/src/App.jsx`, `frontend/src/Dashboard.jsx`, `server.js` | Een reeks iteratieve fixes is doorgevoerd om de app succesvol te deployen, waaronder: het specificeren van de correcte Node.js versie, het oplossen van module-conflicten (ESM/CJS), het idempotent maken van de database-migraties, het corrigeren van de client-side routing en het repareren van hardgecodeerde API-URL's. |
+| **Client-side Navigatie** | `react-router-dom` | `frontend/src/App.jsx`, `frontend/src/Dashboard.jsx`, `frontend/src/Navbar.jsx` (aangemaakt) | De hardgecodeerde `<a>`-tags zijn vervangen door de `<Link>`-component van React Router en er is een herbruikbare `Navbar` gemaakt om correcte, snelle navigatie binnen de SPA mogelijk te maken. |

@@ -1,6 +1,6 @@
 // Bestand: services/availabilityService.js
 
-import { pool } from '../db.js';
+import db from '../db.js'; // Gebruik de Knex instance
 import { getAuthenticatedClient, getBusySlots } from './googleService.js';
 import { calculateAvailability } from '../utils/availability-logic.js';
 import { getTravelTime } from '../utils/travel-time.js';
@@ -21,7 +21,13 @@ export async function getInitialAvailability(linkId) {
         err.statusCode = 400;
         throw err;
     }
-    const { rows: [link] } = await pool.query('SELECT l.*, u.email FROM links l JOIN users u ON l.user_id = u.id WHERE l.id = $1', [linkId]);
+    
+    const link = await db('links as l')
+        .join('users as u', 'l.user_id', 'u.id')
+        .where('l.id', linkId)
+        .select('l.*', 'u.email')
+        .first();
+
     if (!link) {
         const err = new Error('Link niet gevonden.');
         err.statusCode = 404;
@@ -56,7 +62,7 @@ export async function getInitialAvailability(linkId) {
 
 
 export async function calculateAndVerifySlot({ linkId, destinationAddress, slotStart }) {
-    const { rows: [link] } = await pool.query('SELECT * FROM links WHERE id = $1', [linkId]);
+    const link = await db('links').where('id', linkId).first();
     if (!link) {
         const err = new Error('Link niet gevonden.');
         err.statusCode = 404;

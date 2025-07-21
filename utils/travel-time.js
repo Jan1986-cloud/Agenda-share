@@ -1,6 +1,7 @@
 // Bestand: utils/travel-time.js
 import 'dotenv/config';
 import fetch from 'node-fetch';
+import logger from './logger.js';
 
 const KEY = process.env.OPENROUTER_API_KEY;
 
@@ -16,7 +17,7 @@ export async function getTravelTime(originCoords, destCoords) {
     if (originCoords.join(',') === destCoords.join(',')) return { status: 'OK', duration: 0, origin: originCoords, destination: destCoords };
 
     if (!KEY) {
-        console.error('FATAL ERROR: OPENROUTER_API_KEY is niet ingesteld.');
+        logger.error('FATAL ERROR: OPENROUTER_API_KEY is niet ingesteld.');
         return { status: 'API_ERROR', duration: null, origin: originCoords, destination: destCoords };
     }
 
@@ -32,14 +33,17 @@ export async function getTravelTime(originCoords, destCoords) {
         });
 
         if (!response.ok) {
+            const errorBody = await response.text();
             if (response.status === 429) {
-                console.warn('Rate limit exceeded for OpenRouteService API.');
+                logger.warn('Rate limit exceeded for OpenRouteService API.');
                 return { status: 'RATE_LIMIT_EXCEEDED', duration: null, origin: originCoords, destination: destCoords };
             }
-            // Als de API een andere error geeft, log dit en geef een fout terug.
-            console.error(`Error from OpenRouteService API: ${response.status} ${response.statusText}`);
-            const errorBody = await response.text();
-            console.error('Error body:', errorBody);
+            logger.error({
+                message: `Error from OpenRouteService API: ${response.status} ${response.statusText}`,
+                body: errorBody,
+                origin: originCoords,
+                destination: destCoords
+            });
             return { status: 'API_ERROR', duration: null, origin: originCoords, destination: destCoords };
         }
         
@@ -55,7 +59,7 @@ export async function getTravelTime(originCoords, destCoords) {
         return { status: 'ZERO_RESULTS', duration: null, origin: originCoords, destination: destCoords };
 
     } catch (error) {
-        console.error('Error fetching travel time from OpenRouteService:', error);
+        logger.error({ message: 'Error fetching travel time from OpenRouteService', error, origin: originCoords, destination: destCoords });
         return { status: 'API_ERROR', duration: null, origin: originCoords, destination: destCoords };
     }
 }

@@ -1,8 +1,7 @@
 // Bestand: auth/google.js
 
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { pool } from '../db.js';
-import { v4 as uuidv4 } from 'uuid';
+import db from '../db.js'; // Gebruik de Knex instance
 
 export default (passport) => {
     passport.use(new GoogleStrategy({
@@ -15,22 +14,18 @@ export default (passport) => {
         const tokens = { access_token: accessToken, refresh_token: refreshToken };
 
         try {
-            let result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-            let user = result.rows[0];
+            let user = await db('users').where('email', email).first();
 
             if (user) {
                 // Update tokens voor bestaande gebruiker
-                await pool.query('UPDATE users SET tokens = $1 WHERE id = $2', [tokens, user.id]);
+                await db('users').where('id', user.id).update({ tokens });
                 user.tokens = tokens; // Zorg ervoor dat het user object up-to-date is
             } else {
-                // Maak nieuwe gebruiker aan
-                const userId = uuidv4();
-                await pool.query(
-                    'INSERT INTO users (id, email, tokens) VALUES ($1, $2, $3)',
-                    [userId, email, tokens]
-                );
-                result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-                user = result.rows[0];
+                // Maak nieuwe gebruiker aan en haal deze op
+                const [newUser] = await db('users')
+                    .insert({ email, tokens })
+                    .returning('*');
+                user = newUser;
             }
 
             return done(null, user);

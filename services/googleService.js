@@ -1,22 +1,29 @@
 // Bestand: services/googleService.js
 
 import { google } from 'googleapis';
-import { pool } from '../db.js';
+import db from '../db.js'; // Gebruik de Knex instance
+import logger from '../utils/logger.js';
 
 export async function getAuthenticatedClient(userId) {
-	const result = await pool.query('SELECT tokens FROM users WHERE id = $1', [userId]);
-	if (!result.rows.length) throw new Error('User not found');
-	const { tokens } = result.rows[0];
+	const user = await db('users').where('id', userId).select('tokens').first();
+	if (!user) throw new Error('User not found');
+	
+	const { tokens } = user;
 	const auth = new google.auth.OAuth2(
 		process.env.GOOGLE_CLIENT_ID,
 		process.env.GOOGLE_CLIENT_SECRET,
 		process.env.GOOGLE_REDIRECT_URI
 	);
 	auth.setCredentials(tokens);
+
 	auth.on('tokens', refreshed => {
 		const newTokens = { ...tokens, ...refreshed };
-		pool.query('UPDATE users SET tokens = $1 WHERE id = $2', [newTokens, userId]).catch(console.error);
+		db('users')
+			.where('id', userId)
+			.update({ tokens: newTokens })
+			.catch(err => logger.error({ message: 'Failed to update refreshed tokens in DB', error: err, userId }));
 	});
+
 	return auth;
 }
 
@@ -43,7 +50,7 @@ export async function getBusySlots(auth, calendarId, timeMin, timeMax) {
         }, []);
 
     } catch (err) {
-        console.warn('Calendar fetch failed → busySlots=[]', err.message);
+        logger.warn({ message: 'Calendar fetch failed, returning busySlots=[]', error: err.message, calendarId });
         return [];
     }
 }

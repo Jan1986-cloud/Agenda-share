@@ -10,15 +10,17 @@ import pgSession from 'connect-pg-simple';
 import cookieParser from 'cookie-parser';
 import passport from 'passport';
 
-import { pool, createTables, testConnection } from './db.js';
+import db, { pool, testConnection } from './db.js';
 import initializePassport from './config/passport.js';
-import { apiRoutes as allApiRoutes } from './shared/apiRoutes.js';
+import { apiRoutes } from './shared/apiRoutes.js';
+import logger from './utils/logger.js';
 
 // Importeer de route-modules
 import authRoutes from './routes/auth.js';
 import linkRoutes from './routes/links.js';
 import appointmentRoutes from './routes/appointments.js';
-import apiRoutes from './routes/api.js';
+import generalApiRoutes from './routes/api.js'; // CORRECTED: Renamed import
+import planningRoutes from './routes/planning.js';
 
 // --- Express App Setup ---
 const __filename = fileURLToPath(import.meta.url);
@@ -36,8 +38,7 @@ const sessionStore = new PgStore({
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-app.use(express.static('public'));
-app.use('/shared', express.static('shared'));
+app.use(express.static(path.join(__dirname, 'frontend', 'dist')));
 app.use(cookieParser());
 app.set('trust proxy', 1);
 app.use(session({
@@ -57,30 +58,59 @@ initializePassport(passport);
 app.use(passport.initialize());
 app.use(passport.session());
 
-// --- DE PROBLEMATISCHE MIDDLEWARE IS HIER VERWIJDERD ---
-
-// --- Beveiligde Pagina Routes ---
-const isAuthenticated = (req, res, next) => {
-    if (req.isAuthenticated()) {
-        return next();
-    }
-    res.redirect('/');
-};
-
-app.get('/dashboard.html', isAuthenticated, (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
-app.get('/appointments.html', isAuthenticated, (req, res) => res.sendFile(path.join(__dirname, 'public', 'appointments.html')));
-app.get('/link-editor.html', isAuthenticated, (req, res) => res.sendFile(path.join(__dirname, 'public', 'link-editor.html')));
-
-// --- Publieke Routes ---
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.get('/schedule.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'schedule.html')));
-app.get('/privacy.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'privacy.html')));
-
 // --- API Routes ---
-app.use('/', authRoutes);
-app.use(allApiRoutes.api.prefix, apiRoutes);
-app.use(allApiRoutes.links.prefix, linkRoutes);
-app.use(allApiRoutes.appointments.prefix, appointmentRoutes);
+// Alle routes worden nu consistent onder /api gehangen
+app.use(apiRoutes.auth.prefix, authRoutes);
+app.use(apiRoutes.general.prefix, generalApiRoutes); // CORRECTED: Use renamed router
+app.use(apiRoutes.links.prefix, linkRoutes);
+app.use(apiRoutes.appointments.prefix, appointmentRoutes);
+app.use(apiRoutes.planning.prefix, planningRoutes);
+
+
+// --- Frontend Serving ---
+// In production, serve the built frontend files
+if (process.env.NODE_ENV === 'production') {
+    app.use(express.static(path.join(__dirname, 'frontend', 'dist')));
+}
+
+// --- Frontend Catch-all ---
+// Alle GET-verzoeken die niet door een API-route zijn afgehandeld, serveren de React-app.
+// Dit moet NA de API-routes komen.
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend', 'dist', 'index.html'));
+});
+
+// --- Central Error Handler ---
+app.use((err, req, res, next) => {
+    logger.error({
+        message: `Unhandled error for request ${req.method} ${req.path}`,
+        error: {
+            message: err.message,
+            stack: err.stack,
+            code: err.code,
+        },
+        request: {
+            path: req.path,
+            method: req.method,
+            body: req.body,
+            query: req.query,
+            ip: req.ip,
+        }
+    });
+
+    if (res.headersSent) {
+        return next(err);
+    }
+
+    res.status(err.statusCode || 500).json({
+        status: 'error',
+        message: err.message || 'Er is een interne serverfout opgetreden.',
+        code: err.code || 'INTERNAL_SERVER_ERROR',
+        // Toon de stacktrace alleen in development
+        stack: process.env.NODE_ENV === 'production' ? undefined : err.stack,
+    });
+});
+
 
 // --- Server Start ---
 const startServer = async () => {
@@ -96,10 +126,12 @@ const startServer = async () => {
             }
         }
         await testConnection();
-        await createTables();
-        app.listen(port, () => console.log(`Server luistert op http://localhost:${port}`));
+        logger.info('Running database migrations...');
+        await db.migrate.latest();
+        logger.info('Migrations finished.');
+        app.listen(port, () => logger.info(`Server listening on http://localhost:${port}`));
     } catch (error) {
-        console.error('Failed to initialize or start server:', error);
+        logger.error({ message: 'Failed to initialize or start server', error });
         process.exit(1);
     }
 };

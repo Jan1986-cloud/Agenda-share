@@ -1,10 +1,13 @@
 // Dit object wordt onze 'single source of truth' voor alle API-paden.
+// Alle backend-routes moeten beginnen met /api/
 export const apiRoutes = {
   // Routes voor authenticatie
   auth: {
-    login: '/auth',
+    prefix: '/api/auth',
+    status: '/status',
+    login: '/google', // Start de Google OAuth flow
     logout: '/logout',
-    callback: '/oauth2callback',
+    callback: '/google/callback', // De callback URL die Google aanroept
   },
 
   // Routes voor links
@@ -23,16 +26,21 @@ export const apiRoutes = {
     prefix: '/api/appointments',
     getAll: '/',
     delete: (id) => `/${id}`,
-    getAvailability: '/get-availability',
-    verifySlot: '/verify-slot',
-    book: '/book-appointment',
   },
 
-  // Algemene API-routes
-  api: {
+  // Routes voor de publieke planningspagina
+  planning: {
+    prefix: '/api/planning',
+    getLinkDetails: '/:linkId',
+    getAvailability: '/:linkId/availability',
+    verifySlot: '/:linkId/verify-slot',
+    book: '/:linkId/book',
+  },
+
+  // Algemene/gedeelde API-routes
+  general: {
     prefix: '/api',
     config: '/config',
-    linkDetails: '/link-details',
     calendars: '/calendars',
     dashboardSummary: '/dashboard/summary',
   },

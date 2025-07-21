@@ -1,15 +1,23 @@
 // Bestand: routes/appointments.js
+// Dit bestand bevat de routes voor ingelogde gebruikers om hun afspraken te beheren.
 
 import express from 'express';
-import { pool } from '../db.js';
-import { getAuthenticatedClient, bookAppointmentInGoogleCalendar } from '../services/googleService.js';
-import { calculateAndVerifySlot, getInitialAvailability } from '../services/availabilityService.js';
+import db from '../db.js'; // Gebruik de Knex instance
+import { param, query, validationResult } from 'express-validator';
+import { getAuthenticatedClient } from '../services/googleService.js';
+import { google } from 'googleapis';
 import { apiRoutes } from '../shared/apiRoutes.js';
+import logger from '../utils/logger.js';
 
 const router = express.Router();
 const paths = apiRoutes.appointments;
 
-// Middleware to check for authentication using Passport
+// --- Validation Rules ---
+const idParamValidationRules = [
+    param('id').isUUID().withMessage('Ongeldig afspraak ID formaat.')
+];
+
+// --- Middleware ---
 const isAuthenticated = (req, res, next) => {
     if (req.isAuthenticated()) {
         return next();
@@ -17,47 +25,58 @@ const isAuthenticated = (req, res, next) => {
     res.status(401).json({ status: 'error', message: 'Authenticatie vereist.', code: 'UNAUTHORIZED' });
 };
 
+const handleValidationErrors = (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ status: 'error', message: 'Validatiefout.', errors: errors.array(), code: 'VALIDATION_ERROR' });
+    }
+    next();
+};
+
+// --- Routes ---
+
 // GET all appointments for a user or a specific link
-router.get(paths.getAll, isAuthenticated, async (req, res) => {
-    const { linkId } = req.query;
-    let query;
-    const params = [req.user.id];
+router.get(
+    paths.getAll, 
+    isAuthenticated, 
+    [query('linkId').optional().isUUID().withMessage('Ongeldig link ID formaat.')], 
+    handleValidationErrors, 
+    async (req, res, next) => {
+        try {
+            const { linkId } = req.query;
+            let query = db('appointments')
+                .where('user_id', req.user.id)
+                .orderBy('appointment_time', 'desc');
 
-    if (linkId) {
-        query = 'SELECT * FROM appointments WHERE user_id = $1 AND link_id = $2 ORDER BY appointment_time DESC';
-        params.push(linkId);
-    } else {
-        query = 'SELECT * FROM appointments WHERE user_id = $1 ORDER BY appointment_time DESC';
-    }
+            if (linkId) {
+                query = query.andWhere('link_id', linkId);
+            }
 
-    try {
-        const { rows } = await pool.query(query, params);
-        res.json(rows);
-    } catch (error) {
-        console.error('Error fetching appointments:', error);
-        res.status(500).json({ message: 'Fout bij het ophalen van afspraken.', error: error.message });
+            const appointments = await query;
+            res.json(appointments);
+        } catch (error) {
+            next(error);
+        }
     }
-});
+);
 
 // DELETE an appointment
-router.delete(paths.delete(':id'), isAuthenticated, async (req, res) => {
-    const { id } = req.params;
-    const userId = req.user.id;
-
+router.delete(paths.delete(':id'), isAuthenticated, idParamValidationRules, handleValidationErrors, async (req, res, next) => {
     try {
-        const appointmentResult = await pool.query(
-            `SELECT a.google_event_id, l.calendar_id 
-             FROM appointments a
-             JOIN links l ON a.link_id = l.id
-             WHERE a.id = $1 AND a.user_id = $2`,
-            [id, userId]
-        );
+        const { id } = req.params;
+        const userId = req.user.id;
 
-        if (appointmentResult.rows.length === 0) {
+        const appointment = await db('appointments as a')
+            .join('links as l', 'a.link_id', 'l.id')
+            .where({ 'a.id': id, 'a.user_id': userId })
+            .select('a.google_event_id', 'l.calendar_id')
+            .first();
+
+        if (!appointment) {
             return res.status(404).send('Afspraak niet gevonden of geen toestemming.');
         }
 
-        const { google_event_id, calendar_id } = appointmentResult.rows[0];
+        const { google_event_id, calendar_id } = appointment;
 
         if (google_event_id) {
             const auth = await getAuthenticatedClient(userId);
@@ -70,65 +89,15 @@ router.delete(paths.delete(':id'), isAuthenticated, async (req, res) => {
                 });
             } catch (gcalError) {
                 if (gcalError.code !== 404 && gcalError.code !== 410) throw gcalError;
-                console.warn(`Google Calendar event ${google_event_id} was already deleted.`);
+                logger.warn({ message: 'Google Calendar event was already deleted.', eventId: google_event_id, error: gcalError });
             }
         }
 
-        await pool.query('DELETE FROM appointments WHERE id = $1', [id]);
+        await db('appointments').where('id', id).del();
         res.status(204).send();
     } catch (error) {
-        console.error('Error deleting appointment:', error);
-        res.status(500).json({ message: 'Fout bij het verwijderen van de afspraak.', error: error.message });
+        next(error);
     }
 });
-
-// --- Public facing routes for scheduling ---
-
-router.get(paths.getAvailability, async (req, res) => {
-    try {
-        const data = await getInitialAvailability(req.query.linkId);
-        res.json(data);
-    } catch (err) {
-        console.error('Error in /get-availability route:', err);
-        res.status(err.statusCode || 500).json({ error: err.message });
-    }
-});
-
-router.post(paths.verifySlot, async (req, res) => {
-    try {
-        const result = await calculateAndVerifySlot(req.body);
-        res.json(result);
-    } catch (err) {
-        console.error(`[VERIFY_SLOT_ERROR] -`, err);
-        res.status(err.statusCode || 500).json({ status: 'error', message: err.message, code: 'INTERNAL_SERVER_ERROR' });
-    }
-});
-
-router.post(paths.book, async (req, res) => {
-    const { linkId, startTime, name, email, destinationAddress, phone, comments } = req.body;
-    try {
-        const { rows: [link] } = await pool.query('SELECT * FROM links WHERE id = $1', [linkId]);
-        if (!link) {
-             return res.status(404).json({ status: 'error', message: 'Link niet gevonden.', code: 'NOT_FOUND' });
-        }
-
-        const { rows: [dbAppointment] } = await pool.query(
-            'INSERT INTO appointments (link_id, user_id, name, email, phone, comments, appointment_time, destination_address) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
-            [linkId, link.user_id, name, email, phone, comments || null, startTime, destinationAddress]
-        );
-        
-        const googleEvent = await bookAppointmentInGoogleCalendar(link, req.body);
-
-        if (googleEvent.data.id) {
-            await pool.query('UPDATE appointments SET google_event_id = $1 WHERE id = $2', [googleEvent.data.id, dbAppointment.id]);
-        }
-
-        res.status(200).json({ status: 'success', message: 'Afspraak succesvol ingepland.' });
-    } catch (error) {
-        console.error(`[BOOK_APPOINTMENT_ERROR] linkId: ${linkId} -`, error);
-        res.status(500).json({ status: 'error', message: 'Fout bij het aanmaken van de afspraak.', code: 'INTERNAL_SERVER_ERROR' });
-    }
-});
-
 
 export default router;

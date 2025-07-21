@@ -1,8 +1,7 @@
 // Bestand: config/passport.js
 
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { pool } from '../db.js';
-import { v4 as uuidv4 } from 'uuid'; // Zorg ervoor dat uuid geïmporteerd is
+import db from '../db.js'; // Gebruik de Knex instance
 
 export default function(passport) {
   passport.use(
@@ -23,23 +22,19 @@ export default function(passport) {
         const tokens = { access_token: accessToken, refresh_token: refreshToken };
 
         try {
-          // Stap 1: Zoek gebruiker op E-MAIL (zoals in de oude server.js)
-          const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+          const user = await db('users').where('email', email).first();
 
-          if (userResult.rows.length > 0) {
+          if (user) {
             // Gebruiker bestaat: update de tokens en geef de gebruiker terug
-            const user = userResult.rows[0];
-            await pool.query('UPDATE users SET tokens = $1 WHERE id = $2', [tokens, user.id]);
+            await db('users').where('id', user.id).update({ tokens });
             const updatedUser = { ...user, tokens };
             return done(null, updatedUser);
           } else {
-            // Nieuwe gebruiker: maak aan met een UUID (zoals in de oude server.js)
-            const userId = uuidv4();
-            const newUserResult = await pool.query(
-              'INSERT INTO users (id, email, tokens) VALUES ($1, $2, $3) RETURNING *',
-              [userId, email, tokens]
-            );
-            return done(null, newUserResult.rows[0]);
+            // Nieuwe gebruiker: maak aan
+            const [newUser] = await db('users')
+              .insert({ email, tokens })
+              .returning('*');
+            return done(null, newUser);
           }
         } catch (err) {
           return done(err, null);
@@ -48,16 +43,15 @@ export default function(passport) {
     )
   );
 
-  // Serialize en Deserialize blijven werken op basis van de user.id (wat nu weer een UUID is)
   passport.serializeUser((user, done) => {
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id, done) => {
     try {
-      const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
-      if (result.rows.length > 0) {
-        done(null, result.rows[0]);
+      const user = await db('users').where('id', id).first();
+      if (user) {
+        done(null, user);
       } else {
         done(new Error('User not found'), null);
       }

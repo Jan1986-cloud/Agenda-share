@@ -1,6 +1,7 @@
 // Bestand: utils/geocoding.js
 import 'dotenv/config';
 import fetch from 'node-fetch';
+import logger from './logger.js';
 
 const KEY = process.env.OPENROUTER_API_KEY;
 const geocodeCache = new Map();
@@ -16,7 +17,7 @@ export async function getCoordinatesForAddress(address) {
     if (geocodeCache.has(address)) return geocodeCache.get(address);
 
     if (!KEY) {
-        console.error('FATAL ERROR: OPENROUTER_API_KEY is niet ingesteld.');
+        logger.error('FATAL ERROR: OPENROUTER_API_KEY is niet ingesteld.');
         return null;
     }
 
@@ -33,7 +34,7 @@ export async function getCoordinatesForAddress(address) {
         }
         return null;
     } catch (error) {
-        console.error('Error during geocoding:', error);
+        logger.error({ message: 'Error during geocoding', error, address });
         return null;
     }
 }
