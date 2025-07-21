@@ -5,16 +5,13 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "format": "prettier --write .",
-    "lint": "eslint . --fix",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathIgnorePatterns=_archive",
-    "test:keys": "node tools/test-keys.js"
+    "start": "node server.js"
   },
   "author": "PV Monteur",
   "license": "ISC",
   "dependencies": {
     "body-parser": "^2.2.0",
+    "connect-pg-simple": "^9.0.1",
     "cookie-parser": "^1.4.7",
     "date-fns": "2.30.0",
     "date-fns-tz": "2.0.1",
@@ -23,6 +20,8 @@
     "express-session": "^1.18.1",
     "googleapis": "^140.0.1",
     "node-fetch": "3.3.2",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
     "pg": "^8.16.3",
     "uuid": "^11.1.0"
   },

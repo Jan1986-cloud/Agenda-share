@@ -124,7 +124,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="/js/i18n.js"></script>
-    <script>
+    <script type="module">
+        import { apiRoutes } from '/shared/apiRoutes.js';
+
         function createLinkCard(link) {
             const shareUrl = `${window.location.origin}/schedule.html?linkId=${link.id}`;
             const card = document.createElement('div');
@@ -166,7 +168,8 @@
             const contentEl = document.getElementById('dashboard-content');
 
             try {
-                const response = await fetch('/api/dashboard/summary');
+                const url = `${apiRoutes.api.prefix}${apiRoutes.api.dashboardSummary}`;
+                const response = await fetch(url);
                 if (!response.ok) {
                     // Create a custom error object to pass the status
                     const error = new Error('Failed to load dashboard data.');
@@ -213,7 +216,7 @@
                     contentEl.innerHTML = `
                         <div class="alert alert-warning text-center">
                             <p data-i18n="error_session_expired"></p>
-                            <a href="/auth" class="btn btn-primary" data-i18n="login_again_button"></a>
+                            <a href="${apiRoutes.auth.login}" class="btn btn-primary" data-i18n="login_again_button"></a>
                         </div>`;
                 } else {
                     contentEl.innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
@@ -247,7 +250,8 @@
             if (target.classList.contains('duplicate-btn')) {
                 const linkId = target.dataset.id;
                 try {
-                    const response = await fetch(`/api/links/${linkId}/duplicate`, { method: 'POST' });
+                    const url = `${apiRoutes.links.prefix}${apiRoutes.links.duplicate(linkId)}`;
+                    const response = await fetch(url, { method: 'POST' });
                     if (!response.ok) throw new Error('Duplication failed');
                     loadDashboard();
                 } catch (err) {
@@ -262,7 +266,8 @@
                 const confirmMsg = translations['confirm_delete_link'] || 'Are you sure you want to delete this link? This cannot be undone.';
                 if (confirm(confirmMsg)) {
                     try {
-                        const response = await fetch(`/api/links/${linkId}`, { method: 'DELETE' });
+                        const url = `${apiRoutes.links.prefix}${apiRoutes.links.delete(linkId)}`;
+                        const response = await fetch(url, { method: 'DELETE' });
                         if (!response.ok) throw new Error('Deletion failed');
                         loadDashboard();
                     } catch (err) {
