@@ -4,7 +4,7 @@ import Navbar from './Navbar';
 import Dashboard from './Dashboard';
 import Appointments from './Appointments';
 import LinkEditor from './LinkEditor';
-import { apiRoutes } from '@shared/apiRoutes';
+import { apiRoutes } from '@shared/apiRoutes.js';
 
 import { apiClient } from './utils/apiClient';
 
