@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { apiRoutes } from '../../shared/apiRoutes.js';
+import { apiRoutes } from '@shared/apiRoutes';
 
 import { apiClient } from './utils/apiClient.js';
 

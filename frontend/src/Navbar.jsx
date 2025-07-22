@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { apiRoutes } from '../../shared/apiRoutes';
+import { apiRoutes } from '@shared/apiRoutes';
 
 function Navbar({ user }) {
   const logoutUrl = `${apiRoutes.auth.prefix}${apiRoutes.auth.logout}`;

@@ -13,7 +13,7 @@ import cors from 'cors';
 
 import db, { pool, testConnection } from './db.js';
 import initializePassport from './config/passport.js';
-import { apiRoutes } from '../shared/apiRoutes.js';
+import apiRoutes from './shared/apiRoutes.js';
 import logger from './utils/logger.js';
 
 // Importeer de route-modules
