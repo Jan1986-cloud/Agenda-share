@@ -1,1 +1,1 @@
-fix(deploy): add http protocol to nginx proxy_pass
+refactor(deploy): remove hardcoded protocol from nginx proxy_pass
