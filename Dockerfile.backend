@@ -1,19 +1,18 @@
 # Base Image
-FROM node:20-slim AS base
+FROM node:20-slim
 
-# Set working directory for the entire app
+# Set working directory voor de gehele applicatie
 WORKDIR /app
 
-# Copy all files from the build context (the repo root)
+# Kopieer de volledige project-context
 COPY . .
 
-# Set backend as working directory and install dependencies
+# Installeer dependencies in de correcte submap
 WORKDIR /app/backend
 RUN npm ci --omit=dev
 
-# Expose the port the app runs on
+# Exposeer de poort
 EXPOSE 3000
 
-# The command to run the application from the correct directory.
-# Using absolute paths for knexfile and server.js for maximum robustness.
+# Start de applicatie met absolute paden voor maximale robuustheid
 CMD ["/bin/sh", "-c", "npx knex migrate:latest --knexfile /app/backend/knexfile.cjs && node /app/backend/server.js"]
