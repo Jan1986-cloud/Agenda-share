@@ -42,9 +42,13 @@ router.get(paths.login, passport.authenticate('google', {
 router.get(
   paths.callback,
   passport.authenticate('google', { 
-    failureRedirect: '/login', // Redirect to the login page in the SPA
-    successRedirect: '/dashboard', // Redirect to the dashboard in the SPA
-  })
+    failureRedirect: '/login',
+  }),
+  (req, res) => {
+    // Stuur een script terug dat het login-venster sluit.
+    // De hoofdapplicatie zal de statusverandering detecteren.
+    res.send('<script>window.close();</script>');
+  }
 );
 
 // @desc    Logout user

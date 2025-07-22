@@ -29,8 +29,22 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-const LoginPage = () => {
+const LoginPage = ({ onLoginSuccess }) => {
   const loginUrl = `${apiRoutes.auth.prefix}${apiRoutes.auth.login}`;
+
+  const handleLoginClick = () => {
+    const loginWindow = window.open(loginUrl, '_blank', 'width=500,height=600');
+    
+    // Start een interval om te controleren of het login-venster gesloten is.
+    const timer = setInterval(() => {
+      if (loginWindow.closed) {
+        clearInterval(timer);
+        // Geef de App-component een seintje om de status opnieuw te checken.
+        onLoginSuccess();
+      }
+    }, 500);
+  };
+
   return (
     <div className="container">
       <div className="row justify-content-center align-items-center" style={{ height: '80vh' }}>
@@ -38,9 +52,9 @@ const LoginPage = () => {
           <div className="card p-5 shadow-sm">
             <h1 className="h2 mb-4">Welkom bij Agenda Share</h1>
             <p className="text-muted mb-4">Log in met je Google-account om je agenda's te beheren en te delen.</p>
-            <a href={loginUrl} className="btn btn-primary btn-lg">
+            <button onClick={handleLoginClick} className="btn btn-primary btn-lg">
               <i className="bi bi-google me-2"></i> Inloggen met Google
-            </a>
+            </button>
           </div>
         </div>
       </div>
@@ -52,25 +66,27 @@ function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const checkUserStatus = async () => {
-      try {
-        const statusUrl = `${apiRoutes.auth.prefix}${apiRoutes.auth.status}`;
-        const data = await apiClient(statusUrl);
-        if (data.isAuthenticated) {
-          setUser(data.user);
-        }
-      } catch (error) {
-        console.error("Kon de gebruikersstatus niet verifiëren:", error.message);
-        // Gebruiker is waarschijnlijk niet ingelogd, geen actie nodig.
-      } finally {
-        setLoading(false);
+  const checkUserStatus = async () => {
+    setLoading(true);
+    try {
+      const statusUrl = `${apiRoutes.auth.prefix}${apiRoutes.auth.status}`;
+      const data = await apiClient(statusUrl);
+      if (data.isAuthenticated) {
+        setUser(data.user);
+      } else {
+        setUser(null);
       }
-    };
+    } catch (error) {
+      console.error("Kon de gebruikersstatus niet verifiëren:", error.message);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     checkUserStatus();
   }, []);
-
 
   const userContextValue = { user, setUser, loading };
 
@@ -79,13 +95,13 @@ function App() {
       <Router>
         {user && <Navbar user={user} />}
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login" element={<LoginPage onLoginSuccess={checkUserStatus} />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} />
           <Route path="/link-editor" element={<ProtectedRoute><LinkEditor /></ProtectedRoute>} />
           <Route path="/link-editor/:id" element={<ProtectedRoute><LinkEditor /></ProtectedRoute>} />
           {/* Redirect root to dashboard or login */}
-          <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} replace />} />
+          <Route path="/" element={<Navigate to={loading ? "/login" : (user ? "/dashboard" : "/login")} replace />} />
           {/* Catch-all for unknown routes */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -93,5 +109,6 @@ function App() {
     </UserContext.Provider>
   );
 }
+
 
 export default App;
