@@ -1,7 +1,7 @@
 // Bestand: routes/auth.js
 import express from 'express';
 import passport from 'passport';
-import { apiRoutes } from '../../../shared/apiRoutes.js';
+import { apiRoutes } from '../shared/apiRoutes.js';
 
 const router = express.Router();
 const paths = apiRoutes.auth;
