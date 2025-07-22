@@ -1,19 +1,16 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  build: {
-    outDir: 'dist'
+  resolve: {
+    alias: {
+      // Maakt het mogelijk om '@/' te gebruiken om naar de 'src' map te verwijzen
+      '@': path.resolve(__dirname, './src'),
+      // Maakt het mogelijk om '@shared' te gebruiken om naar de 'shared' map te verwijzen
+      '@shared': path.resolve(__dirname, '../shared'),
+    },
   },
-  server: {
-    proxy: {
-      // Stuur alle API-verzoeken (die beginnen met /api) door naar de backend-server.
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      }
-    }
-  }
 });

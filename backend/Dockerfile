@@ -17,6 +17,9 @@ COPY --from=source /source/shared/ ./shared/
 # Installeer dependencies en voer de build uit
 RUN npm ci --omit=dev
 
+# Set de productieomgeving
+ENV NODE_ENV=production
+
 EXPOSE 3000
 # Het startcommando blijft robuust met absolute paden
 CMD ["/bin/sh", "-c", "npx knex migrate:latest --knexfile /app/knexfile.cjs && node /app/server.js"]
