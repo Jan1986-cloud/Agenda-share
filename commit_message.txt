@@ -1,1 +1,1 @@
-test: tolerant timezone expectation
+Fix: Verbeter SSL-configuratie voor productie database-connectie
