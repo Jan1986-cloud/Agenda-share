@@ -1,1 +1,1 @@
-fix(deploy): adjust Dockerfiles for monorepo build context
+fix(deploy): use absolute paths and unified build context in Dockerfiles
