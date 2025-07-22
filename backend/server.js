@@ -1,4 +1,4 @@
-// Bestand: server.js (Versie 2.0 - Gecorrigeerd & Geoptimaliseerd)
+// Bestand: backend/server.js (Versie 2.0 - Gecorrigeerd & Geoptimaliseerd)
 
 import 'dotenv/config';
 import express from 'express';
