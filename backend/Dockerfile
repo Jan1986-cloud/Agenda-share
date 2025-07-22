@@ -19,4 +19,4 @@ EXPOSE 3000
 
 # The command to run the application
 # This will run migrations and then start the server.
-CMD ["npx", "knex", "migrate:latest", "&&", "node", "server.js"]
+CMD ["/bin/sh", "-c", "npx knex migrate:latest && node server.js"]
