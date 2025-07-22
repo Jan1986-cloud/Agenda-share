@@ -1,53 +1,37 @@
-// Update with your config settings.
-require('dotenv').config();
+// backend/knexfile.cjs
+
+// Laad de .env variabelen voor lokale ontwikkeling
+require('dotenv').config({ path: __dirname + '/../.env' });
 
 module.exports = {
   development: {
     client: 'pg',
     connection: {
-      connectionString: process.env.DATABASE_URL,
-      ssl: { require: true },
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_DATABASE,
+      port: process.env.DB_PORT,
     },
     migrations: {
-      tableName: 'knex_migrations',
       directory: './migrations',
     },
     seeds: {
       directory: './seeds',
-    }
-  },
-
-  staging: {
-    client: 'pg',
-    connection: {
-      connectionString: process.env.DATABASE_URL,
-      ssl: { require: true },
     },
-    migrations: {
-      tableName: 'knex_migrations',
-      directory: './migrations',
-    },
-    seeds: {
-      directory: './seeds',
-    }
   },
 
   production: {
     client: 'pg',
     connection: {
       connectionString: process.env.DATABASE_URL,
-      ssl: { require: true },
-    },
-    pool: {
-      min: 2,
-      max: 10
+      ssl: { rejectUnauthorized: false }, // Essentieel voor cloud-platformen zoals Railway
     },
     migrations: {
-      tableName: 'knex_migrations',
       directory: './migrations',
     },
     seeds: {
       directory: './seeds',
-    }
-  }
+    },
+  },
 };
