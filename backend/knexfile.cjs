@@ -6,7 +6,7 @@ module.exports = {
     client: 'pg',
     connection: {
       connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
+      ssl: { require: true },
     },
     migrations: {
       tableName: 'knex_migrations',
@@ -21,7 +21,7 @@ module.exports = {
     client: 'pg',
     connection: {
       connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
+      ssl: { require: true },
     },
     migrations: {
       tableName: 'knex_migrations',
@@ -36,7 +36,7 @@ module.exports = {
     client: 'pg',
     connection: {
       connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
+      ssl: { require: true },
     },
     pool: {
       min: 2,
