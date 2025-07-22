@@ -1,1 +1,1 @@
-refactor(deploy): remove hardcoded protocol from nginx proxy_pass
+fix(db): implement robust SSL connection for production

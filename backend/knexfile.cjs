@@ -25,7 +25,7 @@ module.exports = {
     client: 'pg',
     connection: {
       connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }, // Essentieel voor cloud-platformen zoals Railway
+      ssl: { require: true }, // Correcte, robuuste SSL-instelling voor Railway
     },
     migrations: {
       directory: './migrations',
