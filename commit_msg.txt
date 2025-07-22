@@ -1,1 +1,1 @@
-fix(app): correct frontend imports and remove backend static serving
+fix(deploy): make frontend port dynamic for Railway
