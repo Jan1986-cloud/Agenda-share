@@ -1,0 +1,41 @@
+# Bestand: Dockerfile.frontend
+
+# --- STAGE 1: Build ---
+# Gebruik een slanke Node.js-image voor de build-fase.
+FROM node:20-slim AS build
+
+# Stel de werkdirectory in.
+WORKDIR /app
+
+# Kopieer de package.json-bestanden van de frontend.
+COPY frontend/package*.json ./
+
+# Installeer alle dependencies, inclusief devDependencies zoals Vite.
+RUN npm install
+
+# Kopieer de broncode van de frontend en de gedeelde code.
+# De gedeelde code is nodig voor de Vite-build (bv. voor de @shared alias).
+COPY frontend/ ./
+COPY shared/ ./shared/
+
+# Voer de productie-build uit. Vite compileert de React-app naar statische bestanden.
+RUN npm run build
+
+# --- STAGE 2: Serve ---
+# Gebruik een officiële, lichtgewicht Nginx-image.
+FROM nginx:stable-alpine
+
+# Kopieer de Nginx-configuratie. Dit bestand is essentieel voor het correct
+# functioneren van een Single Page Application (SPA) door alle requests
+# naar index.html te leiden.
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Kopieer de gebouwde statische bestanden van de 'build'-stage naar de
+# standaard Nginx-serveermap.
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Nginx draait standaard op poort 80.
+EXPOSE 80
+
+# Start de Nginx-server in de foreground.
+CMD ["nginx", "-g", "daemon off;"]

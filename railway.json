@@ -1,0 +1,17 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "services": [
+    {
+      "name": "Agenda-share Backend",
+      "builder": "DOCKERFILE",
+      "rootDirectory": ".",
+      "dockerfilePath": "Dockerfile.backend"
+    },
+    {
+      "name": "Agenda-share Frontend",
+      "builder": "DOCKERFILE",
+      "rootDirectory": ".",
+      "dockerfilePath": "Dockerfile.frontend"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+# Bestand: Dockerfile.backend
+
+# --- STAGE 1: Base ---
+# Gebruik een slanke, officiële Node.js LTS-versie voor een kleinere image-grootte.
+FROM node:20-slim AS base
+
+# Stel de werkdirectory in de container in.
+WORKDIR /app
+
+# Stel de omgeving in op productie. Dit zorgt ervoor dat Express en andere
+# dependencies in een geoptimaliseerde modus draaien en dat alleen productie-
+# dependencies worden geïnstalleerd.
+ENV NODE_ENV=production
+
+# --- STAGE 2: Dependencies ---
+# Kopieer alleen de package.json-bestanden om de Docker-cache te optimaliseren.
+# Deze laag wordt alleen opnieuw gebouwd als de dependencies veranderen.
+COPY backend/package*.json ./
+RUN npm install --production
+
+# --- STAGE 3: Build & Run ---
+# Kopieer de broncode van de backend en de gedeelde code.
+COPY backend/ .
+COPY shared/ ./shared/
+
+# De applicatie draait standaard op poort 3000. Railway detecteert dit automatisch.
+EXPOSE 3000
+
+# Het startcommando. Dit voert de migraties uit (zoals gedefinieerd in package.json)
+# en start vervolgens de Node.js-server.
+CMD ["npm", "start"]
