@@ -1,1 +1,1 @@
-fix(deploy): use robust nginx port substitution
+fix(deploy): remove redirect from nginx config for railway proxy
