@@ -1,1 +1,1 @@
-fix(db): implement robust SSL connection for production
+fix(db): allow self-signed certificates for railway db
