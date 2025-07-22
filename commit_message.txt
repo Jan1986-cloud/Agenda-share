@@ -1,1 +1,1 @@
-feat(deploy): add Dockerfiles for frontend and backend
+fix(deploy): adjust Dockerfiles for monorepo build context

@@ -1,22 +1,24 @@
-# Stage 1: Base Image
+# Base Image
 FROM node:20-slim AS base
 
-# Set working directory
+# Set working directory for the entire app
 WORKDIR /app
 
-# Copy package.json and package-lock.json
-COPY package.json package-lock.json ./
+# Copy shared directory first, as it's a dependency
+COPY shared ./shared
 
-# Install production dependencies
+# Copy backend package files
+COPY backend/package.json backend/package-lock.json ./backend/
+
+# Set backend as working directory and install dependencies
+WORKDIR /app/backend
 RUN npm ci --omit=dev
 
-# Copy the rest of the application code
-COPY . .
+# Copy the rest of the backend application code
+COPY backend/ .
 
 # Expose the port the app runs on
-# The PORT environment variable will be set by Railway, defaulting to 3000 if not set.
 EXPOSE 3000
 
-# The command to run the application
-# This will run migrations and then start the server.
+# The command to run the application from the correct directory
 CMD ["/bin/sh", "-c", "npx knex migrate:latest && node server.js"]
