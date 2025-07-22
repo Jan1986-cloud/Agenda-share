@@ -1,1 +1,1 @@
-fix(deploy): remove redirect from nginx config for railway proxy
+fix(deploy): specify envsubst var to prevent nginx config corruption
