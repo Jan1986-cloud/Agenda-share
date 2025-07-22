@@ -56,7 +56,7 @@ function App() {
     // setLoading(true) hier weggelaten om onnodige flikkering te voorkomen
     try {
       const statusUrl = `${apiRoutes.auth.prefix}${apiRoutes.auth.status}`;
-      const data = await apiClient(statusUrl);
+      const { data } = await apiClient.get(statusUrl);
       if (data.isAuthenticated) {
         setUser(data.user);
       } else {

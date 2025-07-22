@@ -82,7 +82,7 @@ function Dashboard() {
         try {
             setLoading(true);
             const url = `${apiRoutes.general.prefix}${apiRoutes.general.dashboardSummary}`;
-            const summaryData = await apiClient(url);
+            const { data: summaryData } = await apiClient.get(url);
             setData(summaryData);
         } catch (err) {
             setError(err);
@@ -99,7 +99,7 @@ function Dashboard() {
         if (!confirm('Weet je zeker dat je deze link wilt dupliceren?')) return;
         try {
             const url = `${apiRoutes.links.prefix}${apiRoutes.links.duplicate(linkId)}`;
-            await apiClient(url, { method: 'POST' });
+            await apiClient.post(url);
             fetchData(); // Refresh data
         } catch (err) {
             alert(`Kon de link niet dupliceren: ${err.message}`);
@@ -110,7 +110,7 @@ function Dashboard() {
         if (!confirm('Weet je zeker dat je deze link wilt verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
         try {
             const url = `${apiRoutes.links.prefix}${apiRoutes.links.delete(linkId)}`;
-            await apiClient(url, { method: 'DELETE' });
+            await apiClient.delete(url);
             fetchData(); // Refresh data
         } catch (err) {
             alert(`Kon de link niet verwijderen: ${err.message}`);
