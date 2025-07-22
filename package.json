@@ -5,7 +5,7 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "npx knex migrate:latest --knexfile knexfile.cjs && node server.js",
+    "start": "cd backend && npx knex migrate:latest && node server.js",
     "build": "npm install --prefix frontend && npm run build --prefix frontend"
   },
   "author": "PV Monteur",
