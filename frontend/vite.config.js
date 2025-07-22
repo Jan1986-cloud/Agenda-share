@@ -10,7 +10,7 @@ export default defineConfig({
       // Maakt het mogelijk om '@/' te gebruiken om naar de 'src' map te verwijzen
       '@': path.resolve(__dirname, './src'),
       // Maakt het mogelijk om '@shared' te gebruiken om naar de 'shared' map te verwijzen
-      '@shared': path.resolve(__dirname, '../shared'),
+      '@shared': path.resolve(__dirname, './shared'),
     },
   },
 });

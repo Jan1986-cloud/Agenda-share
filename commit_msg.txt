@@ -1,1 +1,1 @@
-fix(build): correct import paths for frontend and backend
+fix(build): align docker build context paths
