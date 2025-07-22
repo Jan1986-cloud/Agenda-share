@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { apiRoutes } from '../../shared/apiRoutes.js';
 
+import { apiClient } from './utils/apiClient.js';
+
 // --- Sub-components ---
 
 const KpiCard = ({ icon, title, value }) => (
@@ -23,7 +25,7 @@ const LinkCard = ({ link, onDuplicate, onDelete }) => {
         const target = e.currentTarget;
         navigator.clipboard.writeText(shareUrl).then(() => {
             const originalIcon = target.innerHTML;
-            target.innerHTML = `<i class="bi bi-check-lg"></i>`;
+            target.innerHTML = `<i className="bi bi-check-lg"></i>`;
             target.classList.remove('btn-outline-primary');
             target.classList.add('btn-success');
             setTimeout(() => {
@@ -80,23 +82,7 @@ function Dashboard() {
         try {
             setLoading(true);
             const url = `${apiRoutes.general.prefix}${apiRoutes.general.dashboardSummary}`;
-            const response = await fetch(url);
-            if (!response.ok) {
-                // Check if the response is JSON before trying to parse it
-                const contentType = response.headers.get("content-type");
-                if (contentType && contentType.indexOf("application/json") !== -1) {
-                    const errorData = await response.json();
-                    const err = new Error(errorData.message || `Fout bij het laden van dashboard data: ${response.statusText}`);
-                    err.status = response.status;
-                    throw err;
-                } else {
-                    const textError = await response.text();
-                    const err = new Error(`Onverwachte server respons: ${textError}`);
-                    err.status = response.status;
-                    throw err;
-                }
-            }
-            const summaryData = await response.json();
+            const summaryData = await apiClient(url);
             setData(summaryData);
         } catch (err) {
             setError(err);
@@ -113,11 +99,10 @@ function Dashboard() {
         if (!confirm('Weet je zeker dat je deze link wilt dupliceren?')) return;
         try {
             const url = `${apiRoutes.links.prefix}${apiRoutes.links.duplicate(linkId)}`;
-            const response = await fetch(url, { method: 'POST' });
-            if (!response.ok) throw new Error('Dupliceren mislukt');
+            await apiClient(url, { method: 'POST' });
             fetchData(); // Refresh data
         } catch (err) {
-            alert('Kon de link niet dupliceren.');
+            alert(`Kon de link niet dupliceren: ${err.message}`);
         }
     };
 
@@ -125,13 +110,13 @@ function Dashboard() {
         if (!confirm('Weet je zeker dat je deze link wilt verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
         try {
             const url = `${apiRoutes.links.prefix}${apiRoutes.links.delete(linkId)}`;
-            const response = await fetch(url, { method: 'DELETE' });
-            if (!response.ok) throw new Error('Verwijderen mislukt');
+            await apiClient(url, { method: 'DELETE' });
             fetchData(); // Refresh data
         } catch (err) {
-            alert('Kon de link niet verwijderen.');
+            alert(`Kon de link niet verwijderen: ${err.message}`);
         }
     };
+
 
     const timeSaved = `${Math.floor(data.timeSavedMinutes / 60)}h ${data.timeSavedMinutes % 60}m`;
 

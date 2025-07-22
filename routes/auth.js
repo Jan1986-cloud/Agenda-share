@@ -43,17 +43,8 @@ router.get(
   paths.callback,
   passport.authenticate('google', { 
     failureRedirect: '/login', // Redirect to the login page in the SPA
-  }),
-  (req, res) => {
-    // Stuur een script terug dat de frontend de pagina laat herladen.
-    // Dit is een robuuste manier om de SPA state te vernieuwen na een OAuth redirect.
-    res.send(`
-      <script>
-        window.opener.location.reload(); // Als het een popup was
-        window.location.href = '/dashboard'; // Fallback
-      </script>
-    `);
-  }
+    successRedirect: '/dashboard', // Redirect to the dashboard in the SPA
+  })
 );
 
 // @desc    Logout user

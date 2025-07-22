@@ -6,6 +6,8 @@ import Appointments from './Appointments';
 import LinkEditor from './LinkEditor';
 import { apiRoutes } from '../../shared/apiRoutes';
 
+import { apiClient } from './utils/apiClient';
+
 export const UserContext = createContext(null);
 
 const LoadingSpinner = () => (
@@ -54,15 +56,13 @@ function App() {
     const checkUserStatus = async () => {
       try {
         const statusUrl = `${apiRoutes.auth.prefix}${apiRoutes.auth.status}`;
-        const response = await fetch(statusUrl);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.isAuthenticated) {
-            setUser(data.user);
-          }
+        const data = await apiClient(statusUrl);
+        if (data.isAuthenticated) {
+          setUser(data.user);
         }
       } catch (error) {
-        console.error("Kon de gebruikersstatus niet verifiëren", error);
+        console.error("Kon de gebruikersstatus niet verifiëren:", error.message);
+        // Gebruiker is waarschijnlijk niet ingelogd, geen actie nodig.
       } finally {
         setLoading(false);
       }
@@ -70,6 +70,7 @@ function App() {
 
     checkUserStatus();
   }, []);
+
 
   const userContextValue = { user, setUser, loading };
 
