@@ -93,16 +93,7 @@ app.use(apiRoutes.links.prefix, linkRoutes);
 app.use(apiRoutes.appointments.prefix, appointmentRoutes);
 app.use(apiRoutes.planning.prefix, planningRoutes);
 
-// --- Frontend Serving ---
-if (isProduction) {
-    const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist');
-    app.use(express.static(frontendDistPath)); // CORRECTIE 3: Geen redundante static-aanroep meer
 
-    // --- Frontend Catch-all ---
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(frontendDistPath, 'index.html'));
-    });
-}
 
 // --- Central Error Handler ---
 app.use((err, req, res, next) => {

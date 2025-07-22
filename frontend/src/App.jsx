@@ -6,7 +6,7 @@ import Appointments from './Appointments';
 import LinkEditor from './LinkEditor';
 import { apiRoutes } from '@shared/apiRoutes.js';
 
-import { apiClient } from './utils/apiClient';
+import apiClient from './utils/apiClient';
 
 export const UserContext = createContext(null);
 

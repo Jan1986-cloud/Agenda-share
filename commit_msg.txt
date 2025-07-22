@@ -1,1 +1,1 @@
-fix(build): correct all nested import paths for docker context
+fix(app): correct frontend imports and remove backend static serving
