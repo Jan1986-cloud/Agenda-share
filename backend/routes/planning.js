@@ -4,10 +4,10 @@
 import express from 'express';
 import db from '../db.js';
 import { body, param, validationResult } from 'express-validator';
-import { bookAppointmentInGoogleCalendar } from '../../services/googleService.js';
-import { calculateAndVerifySlot, getInitialAvailability } from '../../services/availabilityService.js';
+import { bookAppointmentInGoogleCalendar } from '../services/googleService.js';
+import { calculateAndVerifySlot, getInitialAvailability } from '../services/availabilityService.js';
 import { apiRoutes } from '../shared/apiRoutes.js';
-import logger from '../../utils/logger.js';
+import logger from '../utils/logger.js';
 
 const router = express.Router();
 const paths = apiRoutes.planning;

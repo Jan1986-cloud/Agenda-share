@@ -2,7 +2,7 @@
 
 import { google } from 'googleapis';
 import db from '../db.js'; // Gebruik de Knex instance
-import logger from '../../utils/logger.js';
+import logger from '../utils/logger.js';
 
 export async function getAuthenticatedClient(userId) {
 	const user = await db('users').where('id', userId).select('tokens').first();

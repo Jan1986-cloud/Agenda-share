@@ -1,1 +1,1 @@
-fix(build): final correction of all backend import paths for Docker context
+fix(build): correct all nested import paths for docker context

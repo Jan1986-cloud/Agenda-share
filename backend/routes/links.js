@@ -4,7 +4,7 @@ import express from 'express';
 import db from '../db.js'; // Gebruik de Knex instance
 import { body, param, validationResult } from 'express-validator';
 import { apiRoutes } from '../shared/apiRoutes.js';
-import logger from '../../utils/logger.js';
+import logger from '../utils/logger.js';
 
 const router = express.Router();
 const paths = apiRoutes.links;

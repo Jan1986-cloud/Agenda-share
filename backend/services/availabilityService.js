@@ -2,9 +2,9 @@
 
 import db from '../db.js'; // Gebruik de Knex instance
 import { getAuthenticatedClient, getBusySlots } from './googleService.js';
-import { calculateAvailability } from '../../utils/availability-logic.js';
-import { getTravelTime } from '../../utils/travel-time.js';
-import { getCoordinatesForAddress } from '../../utils/geocoding.js';
+import { calculateAvailability } from '../utils/availability-logic.js';
+import { getTravelTime } from '../utils/travel-time.js';
+import { getCoordinatesForAddress } from '../utils/geocoding.js';
 
 const getCityFromAddress = (address) => {
     if (!address) return 'Onbekende locatie';
