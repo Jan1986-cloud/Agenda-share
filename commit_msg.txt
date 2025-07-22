@@ -1,1 +1,1 @@
-fix(db): allow self-signed certificates for railway db
+feat(backend): add database ping service to prevent idle timeouts

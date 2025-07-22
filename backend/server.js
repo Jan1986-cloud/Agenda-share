@@ -152,6 +152,18 @@ const startServer = async () => {
              // CORRECTIE 2: Accurate en niet-misleidende log message
             logger.info(`Server listening on port ${port}`);
         });
+
+        // Houd de databaseverbinding warm om timeouts op inactieve platformen te voorkomen.
+        const PING_INTERVAL_MS = 4 * 60 * 1000; // 4 minuten
+        setInterval(async () => {
+            try {
+                await db.raw('SELECT 1');
+                logger.info('Database ping successful, connection is warm.');
+            } catch (err) {
+                logger.error({ message: 'Database ping failed.', error: err });
+            }
+        }, PING_INTERVAL_MS);
+
     } catch (error) {
         logger.error({ message: 'Failed to initialize or start server', error });
         process.exit(1);
