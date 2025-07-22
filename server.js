@@ -9,6 +9,7 @@ import session from 'express-session';
 import pgSession from 'connect-pg-simple';
 import cookieParser from 'cookie-parser';
 import passport from 'passport';
+import cors from 'cors'; // Nieuw
 
 import db, { pool, testConnection } from './db.js';
 import initializePassport from './config/passport.js';
@@ -19,7 +20,7 @@ import logger from './utils/logger.js';
 import authRoutes from './routes/auth.js';
 import linkRoutes from './routes/links.js';
 import appointmentRoutes from './routes/appointments.js';
-import generalApiRoutes from './routes/api.js'; // CORRECTED: Renamed import
+import generalApiRoutes from './routes/api.js';
 import planningRoutes from './routes/planning.js';
 
 // --- Express App Setup ---
@@ -27,6 +28,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 3000;
+
+// --- CORS Middleware ---
+// Essentieel voor de dev-omgeving waar frontend en backend op verschillende poorten draaien.
+app.use(cors({
+  origin: 'http://localhost:5173', // De origin van de Vite dev server
+  credentials: true // Sta het meesturen van cookies toe
+}));
 
 // --- Session Store Setup ---
 const PgStore = pgSession(session);
