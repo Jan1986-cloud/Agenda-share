@@ -47,18 +47,21 @@ const sessionStore = new PgStore({
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'frontend', 'dist')));
-app.set('trust proxy', 1); // Essentieel voor secure cookies achter een proxy
+const isProduction = process.env.NODE_ENV === 'production';
+
+// In productie vertrouwen we de eerste proxy (bv. van Railway/Heroku).
+if (isProduction) {
+  app.set('trust proxy', 1);
+}
+
 app.use(session({
     store: sessionStore,
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      // In productie (bv. Railway) draaien we achter een HTTPS proxy.
-      // In dev (lokaal) zorgt 'trust proxy' ervoor dat dit werkt.
-      secure: true, 
-      // Vereist voor cross-origin cookies.
-      sameSite: 'none', 
+      secure: isProduction, // true in productie, false in dev
+      sameSite: isProduction ? 'none' : 'lax', // 'none' voor cross-site in prod, 'lax' is prima voor dev
       maxAge: 30 * 24 * 60 * 60 * 1000 // 30 dagen
     },
 }));
