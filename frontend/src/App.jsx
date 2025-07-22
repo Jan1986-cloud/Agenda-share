@@ -29,22 +29,8 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-const LoginPage = ({ onLoginSuccess }) => {
+const LoginPage = () => {
   const loginUrl = `${apiRoutes.auth.prefix}${apiRoutes.auth.login}`;
-
-  const handleLoginClick = () => {
-    const loginWindow = window.open(loginUrl, '_blank', 'width=500,height=600');
-    
-    // Start een interval om te controleren of het login-venster gesloten is.
-    const timer = setInterval(() => {
-      if (loginWindow.closed) {
-        clearInterval(timer);
-        // Geef de App-component een seintje om de status opnieuw te checken.
-        onLoginSuccess();
-      }
-    }, 500);
-  };
-
   return (
     <div className="container">
       <div className="row justify-content-center align-items-center" style={{ height: '80vh' }}>
@@ -52,9 +38,9 @@ const LoginPage = ({ onLoginSuccess }) => {
           <div className="card p-5 shadow-sm">
             <h1 className="h2 mb-4">Welkom bij Agenda Share</h1>
             <p className="text-muted mb-4">Log in met je Google-account om je agenda's te beheren en te delen.</p>
-            <button onClick={handleLoginClick} className="btn btn-primary btn-lg">
+            <a href={loginUrl} className="btn btn-primary btn-lg">
               <i className="bi bi-google me-2"></i> Inloggen met Google
-            </button>
+            </a>
           </div>
         </div>
       </div>
@@ -67,7 +53,7 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   const checkUserStatus = async () => {
-    setLoading(true);
+    // setLoading(true) hier weggelaten om onnodige flikkering te voorkomen
     try {
       const statusUrl = `${apiRoutes.auth.prefix}${apiRoutes.auth.status}`;
       const data = await apiClient(statusUrl);
@@ -95,7 +81,7 @@ function App() {
       <Router>
         {user && <Navbar user={user} />}
         <Routes>
-          <Route path="/login" element={<LoginPage onLoginSuccess={checkUserStatus} />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} />
           <Route path="/link-editor" element={<ProtectedRoute><LinkEditor /></ProtectedRoute>} />

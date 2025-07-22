@@ -47,16 +47,18 @@ const sessionStore = new PgStore({
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'frontend', 'dist')));
-app.use(cookieParser());
-app.set('trust proxy', 1);
+app.set('trust proxy', 1); // Essentieel voor secure cookies achter een proxy
 app.use(session({
     store: sessionStore,
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      // In productie (bv. Railway) draaien we achter een HTTPS proxy.
+      // In dev (lokaal) zorgt 'trust proxy' ervoor dat dit werkt.
+      secure: true, 
+      // Vereist voor cross-origin cookies.
+      sameSite: 'none', 
       maxAge: 30 * 24 * 60 * 60 * 1000 // 30 dagen
     },
 }));
