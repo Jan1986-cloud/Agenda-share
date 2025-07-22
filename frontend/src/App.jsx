@@ -87,7 +87,7 @@ function App() {
           <Route path="/link-editor" element={<ProtectedRoute><LinkEditor /></ProtectedRoute>} />
           <Route path="/link-editor/:id" element={<ProtectedRoute><LinkEditor /></ProtectedRoute>} />
           {/* Redirect root to dashboard or login */}
-          <Route path="/" element={<Navigate to={loading ? "/login" : (user ? "/dashboard" : "/login")} replace />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           {/* Catch-all for unknown routes */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

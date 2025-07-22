@@ -1,1 +1,1 @@
-refactor(deploy): implement robust nginx entrypoint script
+fix(app): simplify root navigation logic to prevent race condition
