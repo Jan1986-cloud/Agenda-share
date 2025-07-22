@@ -1,1 +1,1 @@
-fix(deploy): specify envsubst var to prevent nginx config corruption
+refactor(deploy): implement robust nginx entrypoint script
