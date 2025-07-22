@@ -1,1 +1,1 @@
-fix(deploy): use absolute paths and unified build context in Dockerfiles
+refactor(deploy): move Dockerfiles to root for clarity
