@@ -4,18 +4,14 @@
   "description": "Backend server voor de afsprakenplanner",
   "main": "server.js",
   "type": "module",
-  "scripts": {
+   "scripts": {
     "start": "npx knex migrate:latest && node server.js",
-    "build": "npm install --prefix frontend && npm run build --prefix frontend"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "PV Monteur",
   "license": "ISC",
   "engines": {
     "node": "20.19.0"
-  },
-  "scripts": {
-    "start": "npx knex migrate:latest && node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "body-parser": "^2.2.0",
