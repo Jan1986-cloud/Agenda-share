@@ -1,1 +1,1 @@
-fix(app): simplify root navigation logic to prevent race condition
+feat(deploy): implement reverse proxy for api calls
