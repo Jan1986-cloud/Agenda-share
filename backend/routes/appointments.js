@@ -2,7 +2,7 @@
 // Dit bestand bevat de routes voor ingelogde gebruikers om hun afspraken te beheren.
 
 import express from 'express';
-import db from '../../db.js'; // Gebruik de Knex instance
+import db from '../db.js'; // Gebruik de Knex instance
 import { param, query, validationResult } from 'express-validator';
 import { getAuthenticatedClient } from '../../services/googleService.js';
 import { google } from 'googleapis';

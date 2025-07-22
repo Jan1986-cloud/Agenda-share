@@ -2,7 +2,7 @@
 // Dit bestand bevat alle publiek-toegankelijke routes voor het plannen van een afspraak.
 
 import express from 'express';
-import db from '../../db.js';
+import db from '../db.js';
 import { body, param, validationResult } from 'express-validator';
 import { bookAppointmentInGoogleCalendar } from '../../services/googleService.js';
 import { calculateAndVerifySlot, getInitialAvailability } from '../../services/availabilityService.js';
