@@ -1,9 +1,9 @@
-// backend/.eslint/rules/enforce-production-cookie-policy.js
+// backend/.eslint/rules/enforce-correct-cookie-policy.js
 export default {
   meta: {
     type: 'problem',
     docs: {
-      description: 'Enforce secure and conditional SameSite cookie policy for production',
+      description: "Enforce secure='isProduction' and sameSite='lax' for session cookies",
       category: 'Possible Errors',
       recommended: true,
     },
@@ -30,21 +30,16 @@ export default {
             });
           }
 
-          // Check for sameSite: isProduction ? 'none' : 'lax'
+          // Check for sameSite: 'lax'
           const sameSiteProp = cookieObject.properties.find(p => p.key.name === 'sameSite');
           if (
             !sameSiteProp ||
-            sameSiteProp.value.type !== 'ConditionalExpression' ||
-            sameSiteProp.value.test.type !== 'Identifier' ||
-            sameSiteProp.value.test.name !== 'isProduction' ||
-            sameSiteProp.value.consequent.type !== 'Literal' ||
-            sameSiteProp.value.consequent.value !== 'none' ||
-            sameSiteProp.value.alternate.type !== 'Literal' ||
-            sameSiteProp.value.alternate.value !== 'lax'
+            sameSiteProp.value.type !== 'Literal' ||
+            sameSiteProp.value.value !== 'lax'
           ) {
             context.report({
               node: sameSiteProp ? sameSiteProp.value : node,
-              message: "Session cookie `sameSite` property must be `isProduction ? 'none' : 'lax'`.",
+              message: "Session cookie `sameSite` property must be 'lax'.",
             });
           }
         }

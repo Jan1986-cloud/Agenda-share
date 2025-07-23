@@ -1,1 +1,1 @@
-revert(auth): restore and enforce correct production cookie policy
+fix(auth, db): set definitive cookie and database SSL policies
