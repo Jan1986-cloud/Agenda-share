@@ -24,7 +24,7 @@ const ProtectedRoute = ({ children }) => {
     return <LoadingSpinner />;
   }
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={apiRoutes.frontend.login} replace />;
   }
   return children;
 };
@@ -37,7 +37,7 @@ const LoginPage = () => {
         <div className="col-md-6 text-center">
           <div className="card p-5 shadow-sm">
             <h1 className="h2 mb-4">Welkom bij Agenda Share</h1>
-            <p className="text-muted mb-4">Log in met je Google-account om je agenda's te beheren en te delen.</p>
+            <p className="text-muted mb-4">Log in met je Google-account om je agenda&apos;s te beheren en te delen.</p>
             <a href={loginUrl} className="btn btn-primary btn-lg">
               <i className="bi bi-google me-2"></i> Inloggen met Google
             </a>
@@ -81,15 +81,15 @@ function App() {
       <Router>
         {user && <Navbar user={user} />}
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/appointments" element={<ProtectedRoute><Appointments /></ProtectedRoute>} />
-          <Route path="/link-editor" element={<ProtectedRoute><LinkEditor /></ProtectedRoute>} />
-          <Route path="/link-editor/:id" element={<ProtectedRoute><LinkEditor /></ProtectedRoute>} />
-          {/* Redirect root to dashboard or login */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path={apiRoutes.frontend.login} element={<LoginPage />} />
+          <Route path={apiRoutes.frontend.dashboard} element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path={apiRoutes.frontend.appointments} element={<ProtectedRoute><Appointments /></ProtectedRoute>} />
+          <Route path={apiRoutes.frontend.linkEditor} element={<ProtectedRoute><LinkEditor /></ProtectedRoute>} />
+          <Route path={apiRoutes.frontend.linkEditorWithId} element={<ProtectedRoute><LinkEditor /></ProtectedRoute>} />
+          {/* Redirect root to dashboard */}
+          <Route path={apiRoutes.frontend.home} element={<Navigate to={apiRoutes.frontend.dashboard} replace />} />
           {/* Catch-all for unknown routes */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to={apiRoutes.frontend.home} replace />} />
         </Routes>
       </Router>
     </UserContext.Provider>

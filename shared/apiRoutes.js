@@ -44,4 +44,15 @@ export const apiRoutes = {
     calendars: '/calendars',
     dashboardSummary: '/dashboard/summary',
   },
+
+  // Routes voor de frontend (React Router)
+  frontend: {
+    login: '/login',
+    dashboard: '/dashboard',
+    appointments: '/appointments',
+    linkEditor: '/link-editor',
+    linkEditorWithId: '/link-editor/:id',
+    planning: '/planning/:linkId', // Voor de publieke planningspagina
+    home: '/',
+  },
 };
