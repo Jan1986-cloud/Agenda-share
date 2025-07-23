@@ -1,0 +1,8 @@
+refactor(db): centralize knex configuration
+
+Centralizes the Knex database initialization into a single 'backend/config/db.js' file. This ensures that all parts of the application, including services, routes, and Passport.js, use the same, correctly configured database instance with the appropriate SSL settings for production.
+
+- Creates a new shared db instance in backend/config/db.js.
+- Updates all route and service files to import and use the new shared instance.
+- Removes the old, redundant backend/db.js file.
+- Corrects the import path in passport.js.
