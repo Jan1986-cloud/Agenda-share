@@ -4,8 +4,9 @@
   "description": "Backend server voor de afsprakenplanner",
   "main": "server.js",
   "type": "module",
-   "scripts": {
+  "scripts": {
     "start": "npx knex migrate:latest --knexfile knexfile.cjs && node server.js",
+    "lint": "eslint .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "PV Monteur",
@@ -37,6 +38,7 @@
     "@eslint/js": "^9.30.1",
     "eslint": "^9.31.0",
     "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-custom-rules": "^0.0.0",
     "glob": "^11.0.3",
     "globals": "^16.3.0",
     "husky": "^9.1.7",

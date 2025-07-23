@@ -1,1 +1,1 @@
-revert(auth): restore production cookie policy to fix timeout
+fix(auth): enforce correct cookie policy via pre-commit hook
