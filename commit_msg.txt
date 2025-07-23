@@ -1,1 +1,1 @@
-fix(db): revert SSL policy to accept self-signed certificate
+fix(auth): set definitive 'lax' cookie policy for reverse proxy
