@@ -1,1 +1,1 @@
-fix(auth, db): set definitive cookie and database SSL policies
+fix(auth): implement definitive conditional cookie policy

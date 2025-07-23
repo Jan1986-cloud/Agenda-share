@@ -1,5 +1,5 @@
 // backend/eslint.config.js
-import enforceCorrectCookiePolicy from './.eslint/rules/enforce-correct-cookie-policy.js';
+import enforceProductionCookiePolicy from './.eslint/rules/enforce-production-cookie-policy.js';
 import globals from 'globals';
 
 export default [
@@ -16,12 +16,12 @@ export default [
     plugins: {
       'custom-rules': {
         rules: {
-          'enforce-correct-cookie-policy': enforceCorrectCookiePolicy
+          'enforce-production-cookie-policy': enforceProductionCookiePolicy
         }
       }
     },
     rules: {
-      'custom-rules/enforce-correct-cookie-policy': 'error',
+      'custom-rules/enforce-production-cookie-policy': 'error',
     }
   }
 ];
