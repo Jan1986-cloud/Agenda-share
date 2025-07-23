@@ -3,40 +3,35 @@ export default {
   meta: {
     type: 'problem',
     docs: {
-      description: 'Enforce SameSite=lax for session cookies in production',
+      description: "Enforce SameSite='lax' for session cookies",
       category: 'Possible Errors',
       recommended: true,
     },
-    fixable: 'code',
-    schema: [], // no options
+    fixable: null,
+    schema: [],
   },
   create: function (context) {
     return {
       Property(node) {
-        // Zoek naar de 'cookie' property binnen de 'session' configuratie
         if (
           node.key.name === 'cookie' &&
           node.parent.type === 'ObjectExpression' &&
           node.parent.parent.callee &&
           node.parent.parent.callee.name === 'session'
         ) {
-          const sameSiteProperty = node.value.properties.find(
-            (p) => p.key.name === 'sameSite'
-          );
+          const cookieObject = node.value;
 
-          if (sameSiteProperty) {
-            if (
-              sameSiteProperty.value.type !== 'Literal' ||
-              sameSiteProperty.value.value !== 'lax'
-            ) {
-              context.report({
-                node: sameSiteProperty.value,
-                message: 'Session cookie sameSite policy must be "lax".',
-                fix(fixer) {
-                  return fixer.replaceText(sameSiteProperty.value, "'lax'");
-                }
-              });
-            }
+          // Check for sameSite: 'lax'
+          const sameSiteProp = cookieObject.properties.find(p => p.key.name === 'sameSite');
+          if (
+            !sameSiteProp ||
+            sameSiteProp.value.type !== 'Literal' ||
+            sameSiteProp.value.value !== 'lax'
+          ) {
+            context.report({
+              node: sameSiteProp ? sameSiteProp.value : node,
+              message: "Session cookie `sameSite` property must be 'lax'.",
+            });
           }
         }
       },
