@@ -31,20 +31,87 @@ const ProtectedRoute = ({ children }) => {
 
 const LoginPage = () => {
   const loginUrl = `${apiRoutes.auth.prefix}${apiRoutes.auth.login}`;
+
+  const featureIconStyle = {
+    fontSize: '3rem',
+    color: 'var(--bs-primary)',
+  };
+
   return (
-    <div className="container">
-      <div className="row justify-content-center align-items-center" style={{ height: '80vh' }}>
-        <div className="col-md-6 text-center">
-          <div className="card p-5 shadow-sm">
-            <h1 className="h2 mb-4">Welkom bij Agenda Share</h1>
-            <p className="text-muted mb-4">Log in met je Google-account om je agenda&apos;s te beheren en te delen.</p>
-            <a href={loginUrl} className="btn btn-primary btn-lg">
-              <i className="bi bi-google me-2"></i> Inloggen met Google
-            </a>
+    <>
+      {/* Navbar */}
+      <nav className="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top">
+        <div className="container">
+          <a className="navbar-brand" href="#">Agenda Share</a>
+          <div className="collapse navbar-collapse" id="navbarNav">
+            <ul className="navbar-nav ms-auto align-items-center">
+              <li className="nav-item">
+                <a href={loginUrl} className="btn btn-primary">
+                  <i className="bi bi-box-arrow-in-right me-1"></i> Inloggen met Google
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
-      </div>
-    </div>
+      </nav>
+
+      <main>
+        {/* Hero Section */}
+        <header className="text-center" style={{ padding: '6rem 0', backgroundColor: '#ffffff' }}>
+          <div className="container">
+            <div className="row justify-content-center">
+              <div className="col-lg-8">
+                <h1 className="display-4" style={{ fontSize: '3.5rem', fontWeight: 700 }}>De slimste weg naar een volle agenda</h1>
+                <p className="lead mt-3" style={{ fontSize: '1.25rem', color: '#6c757d' }}>Stop met puzzelen, start met plannen. Deel een link en laat uw klanten zelf de perfecte afspraak boeken, inclusief reistijd.</p>
+                <a href={loginUrl} className="btn btn-primary btn-lg mt-4">
+                  Begin Vandaag Nog <i className="bi bi-arrow-right ms-2"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* How It Works Section */}
+        <section className="section bg-light" style={{ padding: '5rem 0' }}>
+          <div className="container">
+            <div className="text-center mb-5">
+              <h2>Hoe het werkt</h2>
+              <p className="lead text-muted">In drie eenvoudige stappen naar een efficiënte planning.</p>
+            </div>
+            <div className="row g-4">
+              <div className="col-md-4">
+                <div className="card text-center p-4 h-100">
+                  <div className="mb-3"><i className="bi bi-link-45deg" style={featureIconStyle}></i></div>
+                  <h4>Creëer & Deel</h4>
+                  <p>Maak een unieke planningslink aan met uw beschikbaarheid en voorkeuren.</p>
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="card text-center p-4 h-100">
+                  <div className="mb-3"><i className="bi bi-stopwatch" style={featureIconStyle}></i></div>
+                  <h4>Klant Kiest</h4>
+                  <p>Uw klant opent de link, kiest een tijdslot dat voor beiden werkt, en vult zijn gegevens in.</p>
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="card text-center p-4 h-100">
+                  <div className="mb-3"><i className="bi bi-calendar-check" style={featureIconStyle}></i></div>
+                  <h4>Direct Bevestigd</h4>
+                  <p>De afspraak, inclusief berekende reistijd, verschijnt automatisch in uw Google Calendar.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* Footer */}
+      <footer className="text-center" style={{ backgroundColor: '#343a40', color: 'white', padding: '3rem 0' }}>
+        <div className="container">
+          <p className="mb-1">&copy; 2025 Agenda Share. All Rights Reserved.</p>
+        </div>
+      </footer>
+    </>
   );
 };
 

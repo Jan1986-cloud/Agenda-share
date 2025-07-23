@@ -1,1 +1,1 @@
-refactor: apply route and database configuration changes
+feat(frontend): restore original rich content for login page
