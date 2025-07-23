@@ -1,1 +1,1 @@
-feat(frontend): restore original rich content for login page
+fix(db): revert SSL policy to accept self-signed certificate
