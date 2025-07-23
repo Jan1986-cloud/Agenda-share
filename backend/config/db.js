@@ -1,15 +1,12 @@
 import knex from 'knex';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 
 // Nodig om een CJS-bestand te kunnen 'require'en in een ES-module
 const require = createRequire(import.meta.url);
 
-// Construeer een absoluut pad naar de knexfile.cjs in de project-root
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const knexfilePath = path.resolve(__dirname, '..', '..', 'knexfile.cjs');
+// Het pad wordt bepaald vanuit de werkdirectory, wat in Docker consistent '/app' is.
+const knexfilePath = path.resolve(process.cwd(), 'knexfile.cjs');
 
 // Laad de CJS-configuratie
 const knexfile = require(knexfilePath);

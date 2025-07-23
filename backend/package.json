@@ -5,18 +5,18 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "npx knex migrate:latest --knexfile knexfile.cjs && node server.js",
+    "start": "npm exec knex -- migrate:latest --knexfile knexfile.cjs && node server.js",
     "lint": "eslint .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "PV Monteur",
   "license": "ISC",
   "imports": {
-    "#config/*": "./config/*.js",
-    "#routes/*": "./routes/*.js",
-    "#services/*": "./services/*.js",
-    "#utils/*": "./utils/*.js",
-    "#shared/*": "../shared/*.js"
+    "#config/*": "./config/*",
+    "#routes/*": "./routes/*",
+    "#services/*": "./services/*",
+    "#utils/*": "./utils/*",
+    "#shared/*": "./shared/*"
   },
   "engines": {
     "node": "20.19.0"
@@ -38,6 +38,7 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.16.3",
+    "pg-connection-string": "^2.6.2",
     "uuid": "^11.1.0",
     "winston": "^3.17.0"
   },
@@ -45,7 +46,7 @@
     "@eslint/js": "^9.30.1",
     "eslint": "^9.31.0",
     "eslint-config-prettier": "^10.1.5",
-    "eslint-plugin-custom-rules": "^0.0.0",
+    "eslint-plugin-custom-rules": "0.0.0",
     "glob": "^11.0.3",
     "globals": "^16.3.0",
     "husky": "^9.1.7",

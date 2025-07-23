@@ -1,13 +1,14 @@
 import 'dotenv/config';
 import express from 'express';
 import bodyParser from 'body-parser';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import passport from 'passport';
 import cors from 'cors';
+import pgSession from 'connect-pg-simple';
+import pg from 'pg';
 
+// Importeer via de robuuste aliassen
 import initializePassport from '#config/passport.js';
 import { apiRoutes } from '#shared/apiRoutes.js';
 import logger from '#utils/logger.js';
@@ -21,24 +22,24 @@ import generalApiRoutes from '#routes/api.js';
 import planningRoutes from '#routes/planning.js';
 
 // --- Express App Setup ---
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const { Pool } = pg;
 const app = express();
+const isProduction = process.env.NODE_ENV === 'production';
 
-// DIAGNOSTIC: "Entry Point" Logger
+// --- Health Check Endpoint ---
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
+// --- Middleware ---
 app.use((req, res, next) => {
     logger.info({ message: `Request received: ${req.method} ${req.originalUrl}`, ip: req.ip });
     next();
 });
 
-const isProduction = process.env.NODE_ENV === 'production';
-
-// --- Dynamische CORS Middleware ---
 const allowedOrigins = [
-  'http://localhost:5173', // Toegestaan voor lokale ontwikkeling
+  'http://localhost:5173',
 ];
-
-// Voeg de productie-URL alleen toe als deze is gedefinieerd
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
@@ -54,33 +55,52 @@ app.use(cors({
   credentials: true
 }));
 
-// --- Standaard Middleware ---
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cookieParser());
 
-// In productie vertrouwen we de eerste proxy (bv. van Railway/Heroku).
 if (isProduction) {
   app.set('trust proxy', 1);
 }
 
-// --- Sessie Middleware (met standaard in-memory store) ---
+// --- Sessie Middleware (PostgreSQL Store) ---
 logger.info('Initializing session middleware...');
+const PgStore = pgSession(session);
+
+// Gebruik de individuele environment variables voor de meest robuuste connectie.
+// Dit omzeilt alle mogelijke problemen met het parsen van de DATABASE_URL.
+const pgPool = new Pool({
+  host: process.env.PGHOST,
+  port: process.env.PGPORT,
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  database: process.env.PGDATABASE,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
+
+const sessionStore = new PgStore({
+  pool: pgPool,
+  tableName: 'user_sessions',
+  createTableIfMissing: true,
+});
+
 app.use(session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 dagen
-    },
+  store: sessionStore,
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 dagen
+  },
 }));
 logger.info('Session middleware initialized.');
 
 // --- Passport Initialisatie ---
 initializePassport(passport);
-
 logger.info('Initializing Passport middleware...');
 app.use(passport.initialize());
 app.use(passport.session());
@@ -93,7 +113,7 @@ app.use(apiRoutes.links.prefix, linkRoutes);
 app.use(apiRoutes.appointments.prefix, appointmentRoutes);
 app.use(apiRoutes.planning.prefix, planningRoutes);
 
-// --- Central Error Handler ---
+// --- Centrale Foutafhandeling ---
 app.use((err, req, res, next) => {
     logger.error({
         message: `Unhandled error for request ${req.method} ${req.path}`,
@@ -130,7 +150,11 @@ const startServer = async () => {
             'GOOGLE_CLIENT_SECRET',
             'GOOGLE_REDIRECT_URI',
             'GOOGLE_MAPS_API_KEY',
-            'DATABASE_URL',
+            'DATABASE_URL', // Blijft nodig voor Knex
+            'PGHOST',       // Nodig voor de sessie-pool
+            'PGUSER',
+            'PGPASSWORD',
+            'PGDATABASE',
             'OPENROUTER_API_KEY'
         ];
         for (const v of requiredVars) {
@@ -143,13 +167,20 @@ const startServer = async () => {
         await db.migrate.latest();
         logger.info('Migrations finished.');
 
-        const port = process.env.PORT || 3000;
+        const port = process.env.PORT || 8080;
         app.listen(port, () => {
             logger.info(`Server listening on port ${port}`);
         });
 
     } catch (error) {
-        logger.error({ message: 'Failed to initialize or start server', error });
+        console.error("--- DETAILED SERVER STARTUP ERROR ---");
+        console.error("MESSAGE:", error ? error.message : 'No message available');
+        console.error("STACK:", error ? error.stack : 'No stack available');
+        console.error("FULL ERROR:", error);
+        logger.error({ 
+            message: 'Failed to initialize or start server', 
+            error: error ? error.toString() : 'Undefined or null error thrown' 
+        });
         process.exit(1);
     }
 };

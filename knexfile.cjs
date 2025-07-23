@@ -3,6 +3,14 @@
 // Laad de .env variabelen voor lokale ontwikkeling
 require('dotenv').config({ path: __dirname + '/../.env' });
 
+// Bouw een robuuste productie-connectie die de DATABASE_URL combineert met de SSL-setting
+const productionConnection = process.env.DATABASE_URL
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+    }
+  : {};
+
 module.exports = {
   development: {
     client: 'pg',
@@ -23,10 +31,8 @@ module.exports = {
 
   production: {
     client: 'pg',
-    connection: {
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-    },
+    // Gebruik de robuuste connectie-variabele
+    connection: productionConnection,
     migrations: {
       directory: './migrations',
     },
