@@ -1,0 +1,8 @@
+{
+  "backend/**/*.{js,jsx}": [
+    "eslint --config backend/eslint.config.js --fix"
+  ],
+  "frontend/**/*.{js,jsx}": [
+    "eslint --config frontend/eslint.config.js --fix"
+  ]
+}

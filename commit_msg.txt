@@ -1,1 +1,1 @@
-fix(auth): implement definitive conditional cookie policy
+chore: centralize routes and activate husky pre-commit hooks

@@ -19,7 +19,8 @@ const KpiCard = ({ icon, title, value }) => (
 );
 
 const LinkCard = ({ link, onDuplicate, onDelete }) => {
-    const shareUrl = `${window.location.origin}/planning/${link.id}`;
+    const planningUrl = apiRoutes.frontend.planning.replace(':linkId', link.id);
+    const shareUrl = `${window.location.origin}${planningUrl}`;
 
     const handleCopy = (e) => {
         const target = e.currentTarget;
@@ -42,7 +43,7 @@ const LinkCard = ({ link, onDuplicate, onDelete }) => {
                 <div className="card-body p-4">
                     <div className="d-flex flex-column flex-md-row justify-content-between align-items-start">
                         <div className="mb-3 mb-md-0">
-                            <h5 className="card-title mb-1"><Link to={`/planning/${link.id}`} target="_blank" rel="noopener noreferrer" className="text-decoration-none text-dark">{link.title}</Link></h5>
+                            <h5 className="card-title mb-1"><Link to={planningUrl} target="_blank" rel="noopener noreferrer" className="text-decoration-none text-dark">{link.title}</Link></h5>
                             <p className="text-muted mb-2">
                                 <Link to={`/appointments?linkId=${link.id}`} className="text-decoration-none">
                                     <span className="badge bg-primary">{link.appointment_count}</span>
@@ -51,8 +52,8 @@ const LinkCard = ({ link, onDuplicate, onDelete }) => {
                             </p>
                         </div>
                         <div className="d-flex align-items-center">
-                            <Link to={`/planning/${link.id}`} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-secondary" title="Test Link"><i className="bi bi-eye me-1"></i> <span className="d-none d-md-inline">Test</span></Link>
-                            <Link to={`/link-editor/${link.id}`} className="btn btn-sm btn-outline-secondary ms-2" title="Bewerk Link"><i className="bi bi-pencil me-1"></i> <span className="d-none d-md-inline">Bewerk</span></Link>
+                            <Link to={planningUrl} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline-secondary" title="Test Link"><i className="bi bi-eye me-1"></i> <span className="d-none d-md-inline">Test</span></Link>
+                            <Link to={apiRoutes.frontend.linkEditorWithId.replace(':id', link.id)} className="btn btn-sm btn-outline-secondary ms-2" title="Bewerk Link"><i className="bi bi-pencil me-1"></i> <span className="d-none d-md-inline">Bewerk</span></Link>
                             <button className="btn btn-sm btn-outline-secondary ms-2" onClick={() => onDuplicate(link.id)} title="Dupliceer Link"><i className="bi bi-copy me-1"></i> <span className="d-none d-md-inline">Dupliceer</span></button>
                             <button className="btn btn-sm btn-outline-danger ms-2" onClick={() => onDelete(link.id)} title="Verwijder Link"><i className="bi bi-trash me-1"></i> <span className="d-none d-md-inline">Verwijder</span></button>
                         </div>
