@@ -24,7 +24,7 @@ COPY backend/ .
 COPY shared/ ./shared/
 
 # De applicatie draait standaard op poort 3000. Railway detecteert dit automatisch.
-EXPOSE 3000
+EXPOSE 8080
 
 # Het startcommando. Dit voert de migraties uit (zoals gedefinieerd in package.json)
 # en start vervolgens de Node.js-server.
