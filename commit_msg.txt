@@ -1,1 +1,1 @@
-feat(auth): enforce secure production cookie policy via linting
+refactor: apply route and database configuration changes

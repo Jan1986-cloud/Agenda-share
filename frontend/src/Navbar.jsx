@@ -8,7 +8,7 @@ function Navbar({ user }) {
   return (
     <nav className="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top shadow-sm">
       <div className="container">
-        <Link className="navbar-brand" to="/dashboard" style={{ fontWeight: 600 }}>
+        <Link className="navbar-brand" to={apiRoutes.frontend.dashboard} style={{ fontWeight: 600 }}>
           <i className="bi bi-calendar-check me-2"></i>Agenda Share
         </Link>
         <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-nav">
@@ -17,10 +17,10 @@ function Navbar({ user }) {
         <div className="collapse navbar-collapse" id="main-nav">
           <ul className="navbar-nav me-auto">
             <li className="nav-item">
-              <NavLink className="nav-link" to="/dashboard">Dashboard</NavLink>
+              <NavLink className="nav-link" to={apiRoutes.frontend.dashboard}>Dashboard</NavLink>
             </li>
             <li className="nav-item">
-              <NavLink className="nav-link" to="/appointments">Afspraken</NavLink>
+              <NavLink className="nav-link" to={apiRoutes.frontend.appointments}>Afspraken</NavLink>
             </li>
           </ul>
           <ul className="navbar-nav ms-auto">

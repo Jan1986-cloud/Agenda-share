@@ -148,7 +148,7 @@ function Dashboard() {
             <div className="container my-5">
                 <div className="d-flex justify-content-between align-items-center mb-4">
                     <h1 className="h2">Dashboard</h1>
-                    <Link to="/link-editor" className="btn btn-primary">
+                    <Link to={apiRoutes.frontend.linkEditor} className="btn btn-primary">
                         <i className="bi bi-plus-lg me-1"></i> Nieuwe Link
                     </Link>
                 </div>
