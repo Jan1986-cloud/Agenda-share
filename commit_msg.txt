@@ -1,1 +1,1 @@
-docs: update gemini.md with timeout analysis and resource conclusion
+feat(backend): add extensive diagnostic logging for auth flow

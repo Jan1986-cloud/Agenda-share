@@ -27,6 +27,13 @@ import planningRoutes from './routes/planning.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
+
+// DIAGNOSTIC: "Entry Point" Logger
+app.use((req, res, next) => {
+    logger.info({ message: `Request received: ${req.method} ${req.originalUrl}`, ip: req.ip });
+    next();
+});
+
 const isProduction = process.env.NODE_ENV === 'production';
 
 // --- Dynamische CORS Middleware --- // CORRECTIE 1: Dynamische origin policy
@@ -69,6 +76,8 @@ if (isProduction) {
   app.set('trust proxy', 1);
 }
 
+// DIAGNOSTIC: Bracketing session middleware
+logger.info('Initializing session middleware...');
 app.use(session({
     store: sessionStore,
     secret: process.env.SESSION_SECRET,
@@ -80,11 +89,16 @@ app.use(session({
       maxAge: 30 * 24 * 60 * 60 * 1000 // 30 dagen
     },
 }));
+logger.info('Session middleware initialized.');
 
 // --- Passport Initialisatie ---
 initializePassport(passport);
+
+// DIAGNOSTIC: Bracketing passport middleware
+logger.info('Initializing Passport middleware...');
 app.use(passport.initialize());
 app.use(passport.session());
+logger.info('Passport middleware initialized.');
 
 // --- API Routes ---
 app.use(apiRoutes.auth.prefix, authRoutes);
@@ -152,17 +166,6 @@ const startServer = async () => {
              // CORRECTIE 2: Accurate en niet-misleidende log message
             logger.info(`Server listening on port ${port}`);
         });
-
-        // Houd de databaseverbinding warm om timeouts op inactieve platformen te voorkomen.
-        const PING_INTERVAL_MS = 4 * 60 * 1000; // 4 minuten
-        setInterval(async () => {
-            try {
-                await db.raw('SELECT 1');
-                logger.info('Database ping successful, connection is warm.');
-            } catch (err) {
-                logger.error({ message: 'Database ping failed.', error: err });
-            }
-        }, PING_INTERVAL_MS);
 
     } catch (error) {
         logger.error({ message: 'Failed to initialize or start server', error });

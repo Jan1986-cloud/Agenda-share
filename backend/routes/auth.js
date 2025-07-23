@@ -10,6 +10,7 @@ const paths = apiRoutes.auth;
 // @desc    Check user authentication status
 // @route   GET /api/auth/status
 router.get(paths.status, (req, res) => {
+  logger.info('Executing /api/auth/status handler.');
   if (req.isAuthenticated()) {
     res.json({
       isAuthenticated: true,
