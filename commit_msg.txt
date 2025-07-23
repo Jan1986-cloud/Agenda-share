@@ -1,1 +1,1 @@
-feat(arch): enforce single source of truth for all routes
+feat(auth): enforce secure production cookie policy via linting
