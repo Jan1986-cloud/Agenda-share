@@ -1,8 +1,6 @@
-// Bestand: config/passport.js
-
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import db from './db.js'; // Gebruik de gecentraliseerde Knex instance
-import logger from '../utils/logger.js'; // Zorg dat deze import bovenaan staat
+import db from '#config/db.js';
+import logger from '#utils/logger.js';
 
 export default function(passport) {
   passport.use(

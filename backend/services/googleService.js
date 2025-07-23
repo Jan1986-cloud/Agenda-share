@@ -1,8 +1,8 @@
 // Bestand: services/googleService.js
 
 import { google } from 'googleapis';
-import db from '../config/db.js'; // Gebruik de gecentraliseerde Knex instance
-import logger from '../utils/logger.js';
+import db from '#config/db.js';
+import logger from '#utils/logger.js';
 
 export async function getAuthenticatedClient(userId) {
 	const user = await db('users').where('id', userId).select('tokens').first();

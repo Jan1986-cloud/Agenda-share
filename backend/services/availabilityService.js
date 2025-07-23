@@ -1,10 +1,10 @@
 // Bestand: services/availabilityService.js
 
-import db from '../config/db.js'; // Gebruik de gecentraliseerde Knex instance
-import { getAuthenticatedClient, getBusySlots } from './googleService.js';
-import { calculateAvailability } from '../utils/availability-logic.js';
-import { getTravelTime } from '../utils/travel-time.js';
-import { getCoordinatesForAddress } from '../utils/geocoding.js';
+import db from '#config/db.js';
+import { getAuthenticatedClient, getBusySlots } from '#services/googleService.js';
+import { calculateAvailability } from '#utils/availability-logic.js';
+import { getTravelTime } from '#utils/travel-time.js';
+import { getCoordinatesForAddress } from '#utils/geocoding.js';
 
 const getCityFromAddress = (address) => {
     if (!address) return 'Onbekende locatie';

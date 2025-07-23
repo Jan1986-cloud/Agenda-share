@@ -11,6 +11,13 @@
   },
   "author": "PV Monteur",
   "license": "ISC",
+  "imports": {
+    "#config/*": "./config/*.js",
+    "#routes/*": "./routes/*.js",
+    "#services/*": "./services/*.js",
+    "#utils/*": "./utils/*.js",
+    "#shared/*": "../shared/*.js"
+  },
   "engines": {
     "node": "20.19.0"
   },

@@ -1,8 +1,8 @@
 // Bestand: routes/auth.js
 import express from 'express';
 import passport from 'passport';
-import { apiRoutes } from '../shared/apiRoutes.js';
-import logger from '../utils/logger.js'; // Zorg dat deze import bovenaan staat
+import { apiRoutes } from '#shared/apiRoutes.js';
+import logger from '#utils/logger.js';
 
 const router = express.Router();
 const paths = apiRoutes.auth;

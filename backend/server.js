@@ -1,33 +1,24 @@
-// Bestand: backend/server.js (Versie 2.0 - Gecorrigeerd & Geoptimaliseerd)
-
 import 'dotenv/config';
 import express from 'express';
 import bodyParser from 'body-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import session from 'express-session';
-/*
-import pgSession from 'connect-pg-simple';
-*/
 import cookieParser from 'cookie-parser';
 import passport from 'passport';
 import cors from 'cors';
 
-import db, { pool, testConnection } from './db.js';
-import initializePassport from './config/passport.js';
-import { apiRoutes } from './shared/apiRoutes.js';
-import logger from './utils/logger.js';
-/*
-import pg from 'pg';
-const { Pool } = pg;
-*/
+import initializePassport from '#config/passport.js';
+import { apiRoutes } from '#shared/apiRoutes.js';
+import logger from '#utils/logger.js';
+import db from '#config/db.js';
 
 // Importeer de route-modules
-import authRoutes from './routes/auth.js';
-import linkRoutes from './routes/links.js';
-import appointmentRoutes from './routes/appointments.js';
-import generalApiRoutes from './routes/api.js';
-import planningRoutes from './routes/planning.js';
+import authRoutes from '#routes/auth.js';
+import linkRoutes from '#routes/links.js';
+import appointmentRoutes from '#routes/appointments.js';
+import generalApiRoutes from '#routes/api.js';
+import planningRoutes from '#routes/planning.js';
 
 // --- Express App Setup ---
 const __filename = fileURLToPath(import.meta.url);
@@ -42,7 +33,7 @@ app.use((req, res, next) => {
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-// --- Dynamische CORS Middleware --- // CORRECTIE 1: Dynamische origin policy
+// --- Dynamische CORS Middleware ---
 const allowedOrigins = [
   'http://localhost:5173', // Toegestaan voor lokale ontwikkeling
 ];
@@ -54,7 +45,6 @@ if (process.env.FRONTEND_URL) {
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Sta verzoeken toe als de origin in de whitelist staat (of als er geen origin is, zoals bij server-naar-server)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -67,39 +57,14 @@ app.use(cors({
 // --- Standaard Middleware ---
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-app.use(cookieParser()); // TOEGEVOEGD: Best practice voor sessiebeheer
-
-/*
-// --- Session Store Setup ---
-const PgStore = pgSession(session);
-
-// Maak een nieuwe Pool-instantie voor de sessie-opslag
-const pgPool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
-
-// Foutafhandelaar voor onverwachte fouten op de pool
-pgPool.on('error', (err, client) => {
-  console.error('❌ Unexpected error on idle client', err);
-  process.exit(-1);
-});
-
-const sessionStore = new PgStore({
-  pool: pgPool,
-  tableName: 'user_sessions',
-  createTableIfMissing: true,
-});
-*/
+app.use(cookieParser());
 
 // In productie vertrouwen we de eerste proxy (bv. van Railway/Heroku).
 if (isProduction) {
   app.set('trust proxy', 1);
 }
 
-// DIAGNOSTIC: Bracketing session middleware
+// --- Sessie Middleware (met standaard in-memory store) ---
 logger.info('Initializing session middleware...');
 app.use(session({
     secret: process.env.SESSION_SECRET,
@@ -116,7 +81,6 @@ logger.info('Session middleware initialized.');
 // --- Passport Initialisatie ---
 initializePassport(passport);
 
-// DIAGNOSTIC: Bracketing passport middleware
 logger.info('Initializing Passport middleware...');
 app.use(passport.initialize());
 app.use(passport.session());
@@ -128,8 +92,6 @@ app.use(apiRoutes.general.prefix, generalApiRoutes);
 app.use(apiRoutes.links.prefix, linkRoutes);
 app.use(apiRoutes.appointments.prefix, appointmentRoutes);
 app.use(apiRoutes.planning.prefix, planningRoutes);
-
-
 
 // --- Central Error Handler ---
 app.use((err, req, res, next) => {
@@ -162,30 +124,27 @@ app.use((err, req, res, next) => {
 // --- Server Start ---
 const startServer = async () => {
     try {
-        // Gedeelte van de startServer functie in backend/server.js
-
-	const requiredVars = [
-    		'SESSION_SECRET',
-    		'GOOGLE_CLIENT_ID',
-    		'GOOGLE_CLIENT_SECRET',
-    		'GOOGLE_REDIRECT_URI',
-    		'GOOGLE_MAPS_API_KEY', // Toegevoegd
-    		'DATABASE_URL',
-    		'OPENROUTER_API_KEY'     // Toegevoegd
-	];
+        const requiredVars = [
+            'SESSION_SECRET',
+            'GOOGLE_CLIENT_ID',
+            'GOOGLE_CLIENT_SECRET',
+            'GOOGLE_REDIRECT_URI',
+            'GOOGLE_MAPS_API_KEY',
+            'DATABASE_URL',
+            'OPENROUTER_API_KEY'
+        ];
         for (const v of requiredVars) {
             if (!process.env[v]) {
                 throw new Error(`FATAL ERROR: Environment variable ${v} is not defined.`);
             }
         }
-        await testConnection();
+        
         logger.info('Running database migrations...');
         await db.migrate.latest();
         logger.info('Migrations finished.');
 
         const port = process.env.PORT || 3000;
         app.listen(port, () => {
-             // CORRECTIE 2: Accurate en niet-misleidende log message
             logger.info(`Server listening on port ${port}`);
         });
 

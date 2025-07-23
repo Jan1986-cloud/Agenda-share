@@ -1,11 +1,11 @@
 // Bestand: routes/api.js
 
 import express from 'express';
-import db from '../config/db.js'; // Gebruik de gecentraliseerde Knex instance
-import { getAuthenticatedClient } from '../services/googleService.js';
+import db from '#config/db.js';
+import { getAuthenticatedClient } from '#services/googleService.js';
 import { google } from 'googleapis';
-import { apiRoutes } from '../shared/apiRoutes.js';
-import logger from '../utils/logger.js';
+import { apiRoutes } from '#shared/apiRoutes.js';
+import logger from '#utils/logger.js';
 
 const router = express.Router();
 const paths = apiRoutes.general;
