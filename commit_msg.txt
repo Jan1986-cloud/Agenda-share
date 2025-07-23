@@ -1,1 +1,1 @@
-fix(auth): set definitive 'lax' cookie policy for reverse proxy
+revert(auth): restore and enforce correct production cookie policy
