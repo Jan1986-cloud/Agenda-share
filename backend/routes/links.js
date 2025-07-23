@@ -1,7 +1,7 @@
 // Bestand: routes/links.js
 
 import express from 'express';
-import db from '../db.js'; // Gebruik de Knex instance
+import db from '../config/db.js'; // Gebruik de gecentraliseerde Knex instance
 import { body, param, validationResult } from 'express-validator';
 import { apiRoutes } from '../shared/apiRoutes.js';
 import logger from '../utils/logger.js';

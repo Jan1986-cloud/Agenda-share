@@ -1,1 +1,0 @@
-chore: centralize routes and activate husky pre-commit hooks

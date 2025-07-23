@@ -1,6 +1,6 @@
 // Bestand: services/availabilityService.js
 
-import db from '../db.js'; // Gebruik de Knex instance
+import db from '../config/db.js'; // Gebruik de gecentraliseerde Knex instance
 import { getAuthenticatedClient, getBusySlots } from './googleService.js';
 import { calculateAvailability } from '../utils/availability-logic.js';
 import { getTravelTime } from '../utils/travel-time.js';

@@ -6,7 +6,9 @@ import bodyParser from 'body-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import session from 'express-session';
+/*
 import pgSession from 'connect-pg-simple';
+*/
 import cookieParser from 'cookie-parser';
 import passport from 'passport';
 import cors from 'cors';
@@ -15,6 +17,10 @@ import db, { pool, testConnection } from './db.js';
 import initializePassport from './config/passport.js';
 import { apiRoutes } from './shared/apiRoutes.js';
 import logger from './utils/logger.js';
+/*
+import pg from 'pg';
+const { Pool } = pg;
+*/
 
 // Importeer de route-modules
 import authRoutes from './routes/auth.js';
@@ -63,13 +69,30 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cookieParser()); // TOEGEVOEGD: Best practice voor sessiebeheer
 
+/*
 // --- Session Store Setup ---
 const PgStore = pgSession(session);
-const sessionStore = new PgStore({
-    conString: process.env.DATABASE_URL,
-    tableName: 'user_sessions',
-    createTableIfMissing: true,
+
+// Maak een nieuwe Pool-instantie voor de sessie-opslag
+const pgPool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
+
+// Foutafhandelaar voor onverwachte fouten op de pool
+pgPool.on('error', (err, client) => {
+  console.error('❌ Unexpected error on idle client', err);
+  process.exit(-1);
+});
+
+const sessionStore = new PgStore({
+  pool: pgPool,
+  tableName: 'user_sessions',
+  createTableIfMissing: true,
+});
+*/
 
 // In productie vertrouwen we de eerste proxy (bv. van Railway/Heroku).
 if (isProduction) {
@@ -79,7 +102,6 @@ if (isProduction) {
 // DIAGNOSTIC: Bracketing session middleware
 logger.info('Initializing session middleware...');
 app.use(session({
-    store: sessionStore,
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
