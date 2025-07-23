@@ -1,1 +1,1 @@
-feat(backend): add database ping service to prevent idle timeouts
+docs: update gemini.md with timeout analysis and resource conclusion

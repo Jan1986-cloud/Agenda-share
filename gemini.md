@@ -50,3 +50,12 @@
 ---
 
 **Huidige Status:** De applicatie is architecturaal gezond, maar de login-loop in productie persisteert. De volgende stap is het analyseren van de live-logs van de productie-omgeving om de laatste fout te identificeren.
+
+### Fase 5: Oorzaken van Langzame Verwerking & Timeout (Huidige Status)
+
+* **Probleem:** Aanhoudende `504 Gateway Timeout` fouten op API-routes zoals `/api/auth/status` en `/api/auth/google`, met een responstijd van ongeveer 60 seconden. Dit duidt op een blokkerende operatie of een vastgelopen proces in de backend.
+* **Belangrijke constatering:** Tijdens deze timeouts worden er **geen verdere logs gegenereerd door de backend-applicatie in Railway**, verder dan de initiële opstartmeldingen (`Server listening on port 8080`). Dit maakt live debugging van de backend-logica onmogelijk.
+* **Resource Analyse:** De toegewezen Railway-resources voor de backend zijn 32 vCPU en 32 GB RAM, terwijl het werkelijke CPU- en geheugengebruik significant lager is (maximaal ~0.8 vCPU en ~250 MB RAM).
+* **Conclusie Resource:** **Resourcebeperkingen (CPU, geheugen) zijn uitgesloten als oorzaak van de langzame verwerking en timeouts.** Het probleem ligt niet in de Railway-omgeving wat betreft de toegewezen computing-kracht.
+
+---
