@@ -66,7 +66,7 @@ app.use(cookieParser()); // TOEGEVOEGD: Best practice voor sessiebeheer
 // --- Session Store Setup ---
 const PgStore = pgSession(session);
 const sessionStore = new PgStore({
-    pool: pool,
+    conString: process.env.DATABASE_URL,
     tableName: 'user_sessions',
     createTableIfMissing: true,
 });

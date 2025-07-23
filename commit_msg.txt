@@ -1,1 +1,1 @@
-feat(backend): add extensive diagnostic logging for auth flow
+fix(backend): decouple session store from knex pool
