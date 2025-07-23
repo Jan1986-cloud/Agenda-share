@@ -85,7 +85,7 @@ app.use(session({
     saveUninitialized: false,
     cookie: {
       secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
+      sameSite: 'lax', // Standaard en meest compatibel achter een reverse proxy
       maxAge: 30 * 24 * 60 * 60 * 1000 // 30 dagen
     },
 }));

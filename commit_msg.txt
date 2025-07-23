@@ -1,1 +1,1 @@
-fix(backend): decouple session store from knex pool
+fix(auth): simplify cookie policy for reverse proxy setup
